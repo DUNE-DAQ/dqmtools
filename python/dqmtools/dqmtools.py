@@ -34,7 +34,7 @@ class DQMTestResult:
         return self.result!=DQMResultEnum.INVALID and self.result!=DQMResultEnum.BAD
 
     def __str__(self):
-        print(f'{self.result}: {self.message}')
+        return f'{self.result}: {self.message}'
 
 class DQMTest:
     
