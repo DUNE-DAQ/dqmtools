@@ -11,6 +11,10 @@ try:
     from plotly.subplots import make_subplots
     import numpy as np
 
+    from PIL import Image
+    from matplotlib.colors import Normalize
+    from matplotlib import cm
+
 except ModuleNotFoundError as err:
     print(err)
     print("\n\n")
@@ -22,6 +26,7 @@ except:
     raise
 
 from .plot_utils import *
+
 
 def plot_WIBEth_by_channel(df_dict,var,det_name,run=None,trigger=None,seq=None,yrange=None,jpeg_base=None):
 
@@ -90,6 +95,7 @@ def plot_WIBEth_pulser_by_channel(df_dict,det_name,run=None,trigger=None,seq=Non
 
 def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
                         offset=True,
+                        make_static=False,make_tp_overlay=False,
                         orientation="vertical",colorscale='plasma',color_range=(-256,256),
                         run=None,trigger=None,seq=None):
 
@@ -127,18 +133,126 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
         xaxis_title='Offline Channel'
         yaxis_title='DTS time ticks (16ns)'
 
-    fig=px.imshow(zdata,
-                  aspect="auto", origin='lower',
-                  x=list(xdata),y=list(ydata),
-                  color_continuous_scale=colorscale,
-                  zmin=color_range[0],zmax=color_range[1])
+    zmin, zmax = color_range
+
+    if make_static:
+
+        xmin = np.min(xdata)
+        xmax = np.max(xdata)
+        ymin = np.min(ydata)
+        ymax = np.max(ydata)
+
+        zdata = np.flip(zdata,0)
+        if zmin is None:
+            zmin = np.min(zdata)
+        if zmax is None:
+            zmax = np.max(zdata)
+
+        col_norm = Normalize(vmin=zmin, vmax=zmax)
+        scalarMap  = cm.ScalarMappable(norm=col_norm, cmap=colorscale )
+        seg_colors = scalarMap.to_rgba(zdata)
+        img = Image.fromarray(np.uint8(seg_colors*255))
+
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=[xmin, xmax],
+                y=[ymin, ymax],
+                mode="markers",
+                marker={"color":[zmin, zmax],
+                        "colorscale":colorscale,
+                        "showscale":True,
+                        "colorbar":{
+                            # "title":"Counts",
+                            "titleside": "right"
+                        },
+                        "opacity": 0
+                        },
+                showlegend=False
+            )
+        )
+
+        fig.update_layout(
+            images=[go.layout.Image(
+                x=xmin,
+                sizex=xmax-xmin,
+                y=ymax,
+                sizey=ymax-ymin,
+                xref="x",
+                yref="y",
+                opacity=1.0,
+                layer="below",
+                sizing="stretch",
+                source=img)]
+        )
+        fig.update_layout(
+            xaxis=dict(showgrid=False, zeroline=False, range=[xmin, xmax]),
+            yaxis=dict(showgrid=False, zeroline=False, range=[ymin, ymax]))
+
+    else:
+        fig=px.imshow(zdata,
+                      aspect="auto", origin='lower',
+                      x=list(xdata),y=list(ydata),
+                      color_continuous_scale=colorscale,
+                      zmin=zmin,zmax=zmax)
 
     fig.update_layout(
         yaxis_title=yaxis_title,
         xaxis_title=xaxis_title,
     )
 
+    #if we aren't doing the TP overlay, we are done
+    if not make_tp_overlay:
+        return fig
+
+    #if we are, let's grab the TPs
+    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
+
+    #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
+    n_apas = len(np.unique(df_tmp["apa"]))
+    idx_names = df_tmp.index.names
+    df_tmp = df_tmp.reset_index()
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas)]
+    df_tmp = df_tmp.set_index(idx_names)
+
+    df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
+    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+    df_tmp = df_tmp.reset_index()
+
+    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+
+    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.time_over_threshold}<br>tot: {x.time_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
+
+    if orientation=="horizontal":
+        xdata = df_tmp["time_peak_trg_sub"]
+        ydata = df_tmp["channel"]
+    else:
+        ydata = df_tmp["time_peak_trg_sub"]
+        xdata = df_tmp["channel"]
+
+    tp_fig=go.Scattergl(
+        x=xdata,
+        y=ydata,
+        mode='markers', name="Trigger Primitives",
+        marker=dict(size=df_tmp["adc_integral"],
+                    sizemode='area',
+                    sizeref=2.*max(df_tmp['adc_integral'])/(12**2),sizemin=3,
+                    color=df_tmp['adc_peak'], #set color equal to a variable
+                    colorscale="delta", # one of plotly colorscales
+                    cmin = 0,
+                    cmax = zmax,
+                    showscale=True,colorbar=dict( x=1.12 )
+                    ),
+        text=df_tmp["marker_string"],
+    )
+
+    fig.add_trace(tp_fig)
+
     return fig
+
 
 def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
                          offset=False,overlay_tps=False,
@@ -178,5 +292,36 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
     fig.update_layout(xaxis_title='DTS Timestmap (16ns) relative to trigger',
                       yaxis_title=yaxis_title,
                       title=f"Waveform for channel {channel}")
+
+    #if we're not overlaying TPs, just leave
+    if not overlay_tps:
+        return fig
+
+    #if we are, let's grab the TPs
+    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
+
+    #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
+    n_apas = len(np.unique(df_tmp["apa"]))
+    idx_names = df_tmp.index.names
+    df_tmp = df_tmp.reset_index()
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas)]
+    df_tmp = df_tmp.set_index(idx_names)
+
+    idx_names = df_tmp.index.names
+    df_tmp = df_tmp.reset_index()
+    df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
+    df_tmp = df_tmp.set_index(idx_names)
+
+    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+    df_tmp = df_tmp.reset_index()
+    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_end_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + x.time_over_threshold,axis=1)
+
+    for index, tp in df_tmp.iterrows():
+        fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)
+        fig.add_vline(x=tp["time_peak_trg_sub"], line_width=1, line_dash="dash", line_color="red")
 
     return fig
