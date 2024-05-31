@@ -218,6 +218,9 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
     df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
+    if len(df_tmp)==0:
+        return fig
+    
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
 
@@ -298,6 +301,10 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
         return fig
 
     #if we are, let's grab the TPs
+
+    if "trgd_kDAQ_kTriggerPrimitiv" not in df_dict:
+        return fig
+            
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
     #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
@@ -314,6 +321,9 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
 
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
+    if len(df_tmp)==0:
+        return fig
+    
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
     df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
