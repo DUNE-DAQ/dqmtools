@@ -261,7 +261,7 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
     n_apas = len(np.unique(df_tmp["apa"]))
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas)]
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas*3)]
     df_tmp = df_tmp.set_index(idx_names)
 
     df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
@@ -369,7 +369,7 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
     n_apas = len(np.unique(df_tmp["apa"]))
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas)]
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas*3)]
     df_tmp = df_tmp.set_index(idx_names)
 
     idx_names = df_tmp.index.names
