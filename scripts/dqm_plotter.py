@@ -52,8 +52,13 @@ def main(filename, output_dir, nworkers, nskip, imgtype):
     tpc_det_key="detd_kHD_TPC_kWIBEth"
     offset=True
 
+    #planes = []
+    #for apa in ["APA1","APA2","APA3","APA4"]:
+    #    for plane in [0,1,2]:
+    #        planes.append((apa,plane))
+
     planes = []
-    for apa in ["APA1","APA2","APA3","APA4"]:
+    for apa in ["APA2"]:
         for plane in [0,1,2]:
             planes.append((apa,plane))
 
@@ -65,7 +70,7 @@ def main(filename, output_dir, nworkers, nskip, imgtype):
                                   orientation="vertical",colorscale='plasma',color_range=(-256,256))
         print(f"Figure for {apa} plane {plane} processed...")
         fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}", font=dict(size=24) ) )
-        fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}")
+        fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}", scale=3)
         return f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}"
             
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:

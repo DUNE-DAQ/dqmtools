@@ -27,6 +27,48 @@ except:
 
 from .plot_utils import *
 
+def empty_plot(text="NO DATA"):
+
+    fig_none = go.Figure()
+    fig_none.update_layout(
+        xaxis = { "visible": False },
+        yaxis = { "visible": False },
+        annotations = [
+            {   
+                "text": text,
+                "xref": "paper",
+                "yref": "paper",
+                "showarrow": False,
+                "font": {
+                    "size": 40
+                }
+            }
+        ]
+    )
+    return fig_none
+
+    fig_none.add_trace(go.Scatter(
+        x=[0,1,2],
+        y=[0,1,2],
+        mode="lines+markers+text",
+        text=["",text,""],
+        textfont_size=40,
+    ))
+    fig_none.update_layout(
+        paper_bgcolor="white",
+        plot_bgcolor="white"      
+    )
+    fig_none.update_layout(
+        xaxis = dict(
+            showgrid=False,
+            gridcolor="white",
+            zerolinecolor="white"),
+        yaxis = dict(
+            showgrid=False,
+            gridcolor="white",
+            zerolinecolor="white"))
+
+    return fig_none
 
 def plot_WIBEth_by_channel(df_dict,var,det_name,run=None,trigger=None,seq=None,yrange=None,jpeg_base=None):
 
@@ -94,30 +136,37 @@ def plot_WIBEth_pulser_by_channel(df_dict,det_name,run=None,trigger=None,seq=Non
     return fig
 
 def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
-                        offset=True,
+                        offset=True,offset_type="median",
                         make_static=False,make_tp_overlay=False,
                         orientation="vertical",colorscale='plasma',color_range=(-256,256),
                         run=None,trigger=None,seq=None):
 
     rename_PD2HD_APAs(df_dict)
 
-    if tpc_det_key not in df_dict.keys():
-        print(f"Can not make plots for {tpc_det_key}, no DATA found")
-        return None
+    offset_var = f'adc_{offset_type}'
+    
     tpc_wvfm_key = "detw"+tpc_det_key[4:]
 
+    if tpc_det_key not in df_dict.keys():
+        print(f"Can not make plots for {tpc_det_key}, no DATA found")
+        return empty_plot()
+
+    if tpc_wvfm_key not in df_dict.keys():
+        print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
+        return empty_plot()
+    
     df_tmp = df_dict[tpc_wvfm_key]
     df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
 
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
     if offset:
-        df_tmp = df_tmp.merge(df_dict[tpc_det_key]["adc_mean"],left_index=True,right_index=True)
+        df_tmp = df_tmp.merge(df_dict[tpc_det_key][offset_var],left_index=True,right_index=True)
 
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
     df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
     if offset:
-        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp["adc_mean"]
+        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
     df_tmp = df_tmp.sort_values("channel")
 
     if orientation=="horizontal":
@@ -258,15 +307,24 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
 
 
 def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
-                         offset=False,overlay_tps=False,
+                         offset=False,offset_type='median',
+                         overlay_tps=False,
                          run=None,trigger=None,seq=None):
 
     rename_PD2HD_APAs(df_dict)
 
+    offset_var = f'adc_{offset_type}'
+    
+    tpc_wvfm_key = "detw"+tpc_det_key[4:]
+
     if tpc_det_key not in df_dict.keys():
         print(f"Can not make plots for {tpc_det_key}, no DATA found")
-        return None
-    tpc_wvfm_key = "detw"+tpc_det_key[4:]
+        return empty_plot()
+
+    if tpc_wvfm_key not in df_dict.keys():
+        print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
+        return empty_plot()
+
     df_tmp = df_dict[tpc_wvfm_key]
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
@@ -275,7 +333,7 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
 
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
     if offset:
-        df_tmp = df_tmp.merge(df_dict[tpc_det_key]["adc_mean"],left_index=True,right_index=True)
+        df_tmp = df_tmp.merge(df_dict[tpc_det_key][offset_var],left_index=True,right_index=True)
 
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
@@ -283,7 +341,7 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
     df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
     yaxis_title = "ADC counts"
     if offset:
-        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp["adc_mean"]
+        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
         yaxis_title = yaxis_title + " (pedestal subtracted)"
 
     print(df_tmp)
@@ -302,7 +360,7 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
 
     #if we are, let's grab the TPs
 
-    if "trgd_kDAQ_kTriggerPrimitiv" not in df_dict:
+    if "trgd_kDAQ_kTriggerPrimitive" not in df_dict:
         return fig
             
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
