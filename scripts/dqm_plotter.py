@@ -52,15 +52,15 @@ def main(filename, output_dir, nworkers, nskip, imgtype):
     tpc_det_key="detd_kHD_TPC_kWIBEth"
     offset=True
 
-    #planes = []
-    #for apa in ["APA1","APA2","APA3","APA4"]:
-    #    for plane in [0,1,2]:
-    #        planes.append((apa,plane))
-
     planes = []
-    for apa in ["APA2"]:
+    for apa in ["APA1","APA2","APA3","APA4"]:
         for plane in [0,1,2]:
             planes.append((apa,plane))
+
+    #planes = []
+    #for apa in ["APA2"]:
+    #    for plane in [0,1,2]:
+    #        planes.append((apa,plane))
 
     def make_adc_map_fig(apa,plane):
         df_tmp, index = dfc.select_record(df_dict[tpc_det_key])

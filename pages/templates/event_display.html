@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NP04 EVENT DISPLAYS</title>
+    <script>
+        // Refresh the page every 30 seconds
+        setInterval(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .image-container {
+            text-align: center;
+            margin: 20px;
+        }
+        img {
+            width: 80%;
+            height: auto;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    {% if apa %}
+    <h1>NP04 EVENT DISPLAYS: APA {{ apa }}</h1>
+    {% else %}
+    <h1>NP04 EVENT DISPLAYS</h1>
+    {% endif %}
+    <strong><nav>
+	<ul class="menu">
+	  {% for apa_no in range(1,5) %}
+	  <li><a href="{{ url_for('event_display',apa=apa_no) }}">APA {{ apa_no }} </a></li>	  
+	  {% endfor %}
+	</ul>
+    </nav></strong>
+    {% for image in images %}
+        <div class="image-container">
+            <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}"/>
+        </div>
+    {% endfor %}
+</body>
+</html>
