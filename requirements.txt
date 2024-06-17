@@ -3,4 +3,5 @@ pandas
 tables
 tabulate
 plotly
+tqdm
 kaleido
