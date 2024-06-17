@@ -28,14 +28,16 @@
     </style>
 </head>
 <body>
-    {% if apa %}
+    {% if plane %}
+    <h1>NP04 EVENT DISPLAYS: APA {{ apa }} Plane {{ plane }}</h1>
+    {% elif apa %}
     <h1>NP04 EVENT DISPLAYS: APA {{ apa }}</h1>
     {% else %}
     <h1>NP04 EVENT DISPLAYS</h1>
     {% endif %}
     <strong><nav>
 	<ul class="menu">
-	  {% for apa_no in range(1,5) %}
+	  {% for apa_no in [1,2,3,4] %}
 	  <li><a href="{{ url_for('event_display',apa=apa_no) }}">APA {{ apa_no }} </a></li>	  
 	  {% endfor %}
 	</ul>
