@@ -12,12 +12,12 @@ IMAGE_DIRECTORY = '/nfs/rscratch/wketchum/dqm_data/EventDisplays/'
 last_mod_time = 0
 images = []
 
-# Regular expression to parse the filenames
-filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
+def get_latest_EventDisplay_files(directory,select_apa=None,select_plane=None):
 
-def get_latest_files(directory,select_apa=None):
+    # Regular expression to parse the filenames
+    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
 
-    print(directory)
+    #print(directory)
     
     max_images = defaultdict(lambda: {'run': -1, 'trigger': -1, 'filename': ''})
         
@@ -29,14 +29,14 @@ def get_latest_files(directory,select_apa=None):
             apa = int(match.group(3))
             plane = int(match.group(4))
 
-            print(run,trigger,apa,plane,select_apa)
-
-            #our_apa = (select_apa!=-1 and apa!=select_apa)
-            #print(apa,select_apa,our_apa)
-
             if select_apa is not None:
                 select_apa = int(select_apa)
                 if apa!=select_apa:
+                    continue
+
+            if select_plane is not None:
+                select_plane = int(select_plane)
+                if plane!=select_plane:
                     continue
             
             # Check if this run and trigger number is larger than the current stored values
@@ -50,51 +50,6 @@ def get_latest_files(directory,select_apa=None):
     sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
     return sorted_images
 
-#<img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}" style="max-width: 1200px; max-height: 1200px;"/>
-#            <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}" "/>
-
-# Template for displaying images
-HTML_TEMPLATE = '''
-<!DOCTYPE html>
-<html>
-<head>
-    <title>NP04 EVENT DISPLAYS</title>
-    <script>
-        // Refresh the page every 30 seconds
-        setInterval(function() {
-            window.location.reload();
-        }, 30000);
-    </script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .image-container {
-            text-align: center;
-            margin: 20px;
-        }
-        img {
-            width: 80%;
-            height: auto;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
-</head>
-<body>
-    <h1>NP04 EVENT DISPLAYS</h1>
-    {% for image in images %}
-        <div class="image-container">
-            <img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}"/>
-        </div>
-    {% endfor %}
-</body>
-</html>
-'''
-
 @app.before_request
 def check_for_new_images():
     global last_mod_time, images
@@ -102,7 +57,7 @@ def check_for_new_images():
     if current_mod_time != last_mod_time:
         last_mod_time = current_mod_time
         #images = [f for f in os.listdir(IMAGE_DIRECTORY) if os.path.isfile(os.path.join(IMAGE_DIRECTORY, f))]
-        images = get_latest_files(IMAGE_DIRECTORY)
+        images = get_latest_EventDisplay_files(IMAGE_DIRECTORY)
         
 #@app.route('/')
 #def index():
@@ -112,34 +67,13 @@ def check_for_new_images():
 #    return render_template('event_display.html', images=images)
 
 @app.route('/event_display/')
-@app.route('/event_display/<apa>')
-def event_display(apa=None):
+@app.route('/event_display/apa<apa>')
+@app.route('/event_display/apa<apa>_plane<plane>')
+def event_display(apa=None,plane=None):
     global images
-    images = get_latest_files(IMAGE_DIRECTORY, select_apa=apa)
+    images = get_latest_EventDisplay_files(IMAGE_DIRECTORY, select_apa=apa, select_plane=plane)
     print(images)
-    return render_template('event_display.html', images=images, apa=apa)
-
-@app.route('/event_display_apa2')
-def event_display_apa2():
-    global images
-    images = get_latest_files(IMAGE_DIRECTORY)
-    print(images)
-    return render_template('event_display.html', images=images, select_apa=2)
-
-@app.route('/event_display_apa3')
-def event_display_apa3():
-    global images
-    images = get_latest_files(IMAGE_DIRECTORY)
-    print(images)
-    return render_template('event_display.html', images=images, select_apa=3)
-
-@app.route('/event_display_apa4')
-def event_display_apa4():
-    global images
-    images = get_latest_files(IMAGE_DIRECTORY)
-    print(images)
-    return render_template('event_display.html', images=images, select_apa=4)
-
+    return render_template('event_display.html', images=images, apa=apa, plane=plane)
 
 @app.route('/images/<path:filename>')
 def serve_image(filename):
