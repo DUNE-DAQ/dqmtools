@@ -9,6 +9,8 @@ from rawdatautils.unpack.daphne import *
 from tqdm import tqdm
 
 import os
+from os.path import join, getmtime
+
 import numpy as np
 import pandas as pd
 import time
@@ -57,7 +59,12 @@ def dhf5_reader(path, file_list):
 
 def fig_creator(path):   
     files_list= os.listdir(path)
-    data_list = dhf5_reader(path, files_list[len(files_list)-2:])
+    files_with_times = [(file, getmtime(join(path, file))) for file in files_list]
+    sorted_files = sorted(files_with_times, key=lambda x: x[1], reverse=True)
+    sorted_filenames = [file[0] for file in sorted_files]
+
+    last_4_files = sorted_filenames[:4]
+    data_list = dhf5_reader(path, last_4_files)
     df        = df_data(data_list)
     map_df    = df_channel_map(df)
     fig_baseline, fig_rms = baseline_rms_plot(map_df)
