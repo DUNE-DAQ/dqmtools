@@ -77,10 +77,15 @@ def fig_creator(path):
     
     output_path = f'/nfs/rscratch/pds/plot/'
 
-    fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
-    fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
-    fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
-    heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
+    #fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
+    #fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
+    #fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
+    #heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
+
+    fig_baseline.write_image(f"Baseline.svg")
+    fig_rms.write_image(f"RMS.svg")
+    fig_waveform.write_image(f"Waveform.svg")
+    heat_map.write_image(f"Heat.svg")
 
 @click.command()
 @click.option("--path", '-p', default = '/nfs/rscratch/np04daq/DQM_DATA/NP04/', help="Insert the desired file.")
