@@ -77,7 +77,7 @@ def fig_creator(path,output_path):
     fig_waveform = waveforms_plot(map_df)
     heat_map  = heat_map_plot(map_df)
 
-    file  =files_list[0]
+    file  =sorted_filenames[0]
     run   =file.split('_')[2]
     run_id=file.split('_')[3]
 

@@ -1,38 +1,12 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>NP04 DQM</title>
-    <script>
-        // Refresh the page every 30 seconds
-        setInterval(function() {
-            window.location.reload();
-        }, 30000);
-    </script>
-    <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .image-container {
-            text-align: center;
-            margin: 20px;
-        }
-        img {
-            width: 80%;
-            height: auto;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
-</head>
-<body>
-    <h1>NP04 DQM: PDS PLOTS!!</h1>
-    {% for image in images %}
-        <div class="image-container">
-            <img src="{{ url_for('serve_image', subdir='pds_plots', filename=image) }}" alt="{{ image }}"/>
-        </div>
-    {% endfor %}
-</body>
-</html>
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>NP04 DQM: PDS PLOTS!!</h1>
+{% for image in images %}
+<div class="image-container">
+  <img src="{{ url_for('serve_image', subdir='pds_plots', filename=image) }}" alt="{{ image }}"/>
+</div>
+{% endfor %}
+
+{% endblock %}

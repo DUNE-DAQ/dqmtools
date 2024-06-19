@@ -13,34 +13,27 @@ last_mod_time = 0
 
 def get_latest_pds_plots(directory):
 
-    filename_regex = [
-        re.compile(r"run(\d+)_(\d+)_Baseline.svg"),
-        re.compile(r"run(\d+)_(\d+)_RMS.svg"),
-        re.compile(r"run(\d+)_(\d+)_Waveform.svg"),
-        re.compile(r"run(\d+)_(\d+)_Heat.svg")
-    ]
-
     max_images = defaultdict(lambda: {'run': -1, 'trigger': -1, 'filename': ''})
-
+    filename_regex = re.compile(r"run(\d+)_(\d+)_([^_]+)\.svg")
+    
     for filename in os.listdir(directory):
-        file_to_add = []
-        for file_regex in filename_regex:
-                match = file_regex.match(filename)
-                if match:
-                    run = int(match.group(1))
-                    run_id = int(match.group(2))
-                    key = (run, run_id, file_regex.pattern)
-                    
-                    if (run > max_images[key]['run']) or (run == max_images[key]['run'] and run_id > max_images[key]['run_id']):
-                        max_images[key]['run'] = run
-                        max_images[key]['run_id'] = run_id
-                        max_images[key]['filename'] = filename
-        sorted_keys = sorted(max_images.keys(), key=lambda x: (x[0], x[1]))
-        sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
 
-    return sorted_images
+        match = filename_regex.match(filename)
+        if match:
+            run = int(match.group(1))
+            run_id = int(match.group(2))
+            key = str(match.group(3))
+
+            if (run > max_images[key]['run']) or (run == max_images[key]['run'] and run_id > max_images[key]['trigger']):
+                max_images[key]['run'] = run
+                max_images[key]['trigger'] = run_id
+                max_images[key]['filename'] = filename
+
     
-    
+    sorted_keys = list(max_images.keys())
+    sorted_keys.sort()
+    images = [ max_images[key]['filename'] for key in sorted_keys ]
+    return images
 
 
 def get_latest_WIBTests_files(directory):
@@ -102,12 +95,11 @@ def get_latest_EventDisplay_files(directory,select_apa=None,select_plane=None):
     sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
     return sorted_images
         
-#@app.route('/')
-#def index():
-#    global images
-#    images = get_latest_files(IMAGE_DIRECTORY)
-#    print(images)
-#    return render_template('event_display.html', images=images)
+@app.route('/')
+@app.route('/index')
+@app.route('/home')
+def index():
+    return render_template('index.html')
 
 @app.route('/event_display/')
 @app.route('/event_display/apa<apa>')
