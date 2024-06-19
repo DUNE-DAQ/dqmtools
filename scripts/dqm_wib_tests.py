@@ -8,34 +8,32 @@ from dqmtools.dqmplots import *
 
 import hdf5libs
 import os
+import pytz
 
 import click
 @click.command()
 @click.argument('filenames', nargs=-1, type=click.Path(exists=True))
+@click.argument('output_dir', type=click.Path(exists=True))
 @click.option('--nrecords', '-n', default=-1, help='How many Trigger Records to process (default: all)')
 @click.option('--maxfiles', default=1, help='Maximum number of files to consider (default: 1)')
 @click.option('--nworkers', default=10, help='How many thread workers to launch (default: 10)')
 @click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
-@click.option('--warm/--cold', default=True, help='Whether we are running warm or cold (default: "warm")')
+@click.option('--imgtype', default='svg', help='Type of image to write')
 
-def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
+def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
 
     print(filenames)
     if(os.path.isdir(filenames[0])):
         files = os.listdir(filenames[0])
-        paths = [os.path.join(filenames[0], basename) for basename in files]
-        print(paths)
+        paths = [os.path.join(filenames[0], basename) for basename in files if not basename.endswith(".writing")]
         paths.sort(key=lambda x: os.path.getctime(x))
         paths.reverse()
-        print(paths)
         filenames = paths
 
         
-    print(filenames)
     if(maxfiles>len(filenames)):
         maxfiles=len(filenames)
     filenames = filenames[0:maxfiles]
-    print(filenames)
     
     #setup our tests
     dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
@@ -45,20 +43,10 @@ def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
     if(hd):
         tpc_det_name = "HD_TPC"
         tpc_det_id = 3
-        tpc_rms_high_threshold=100
-        tpc_rms_low_threshold=[15.]
-        if not warm:
-            tpc_rms_high_threshold=50
-            tpc_rms_low_threshold=[4.,3.]
             
     else:
         tpc_det_name = "VD_BottomTPC"
         tpc_det_id = 10
-        tpc_rms_high_threshold=100
-        tpc_rms_low_threshold=[12.,20.]        
-        if not warm:
-            tpc_rms_high_threshold=50
-            tpc_rms_low_threshold=[2.,3.]
 
     dqm_test_suite_wibs.register_test(CheckTimestampDiffs_WIBEth(tpc_det_name))
 
@@ -79,13 +67,6 @@ def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
 
     dqm_test_suite_wibs.register_test(CheckTimestampsAligned(tpc_det_id),f"CheckTimestampsAligned_{tpc_det_name}")
     dqm_test_suite_wibs.register_test(CheckRequestTimes_WIBEth(tpc_det_name))
-
-    #dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
-    #                                  name=f"CheckRMS_{tpc_det_name}_High")
-    #dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_low_threshold,operator=operator.lt,verbose=True),
-    #                                  name=f"CheckRMS_{tpc_det_name}_Low")
-    #dqm_test_suite_wibs.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
-    #                                  name=f"CheckPedestal_{tpc_det_name}")
 
     df_dict = {}
     n_processed_records = 0
@@ -118,7 +99,7 @@ def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
             print(f'Results for {test.get_name()}:')
             print(test.get_table(show_last_update=False))
 
-    results = dqm_test_suite_wibs.get_latest_results()[["result","message","name","last_update"]]
+    results = dqm_test_suite_wibs.get_latest_results()[["result","message","name"]]
     def apply_color(x):
         if(x==DQMResultEnum.OK): return "rgb(179, 226, 205)"
         if(x==DQMResultEnum.BAD): return "rgb(251,180,174)"
@@ -128,16 +109,25 @@ def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
     results["color"] = results["result"].apply(apply_color)
     #results=results.astype(str)
     #print(results)
+
+    df_trh = df_dict["trh"].reset_index().sort_values(by=["run","trigger","sequence"])
+    df_trh['trigger_time_cern'] = pd.to_datetime(df_trh['trigger_time'])
+    df_trh['trigger_time_cern'] = df_trh['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
+
+    run = df_trh["run"].iloc[-1]
+    trigger = df_trh["trigger"].iloc[-1]
+    trigger_timestamp_cern = df_trh["trigger_time_cern"].iloc[-1]
+    
     
     fig = go.Figure(data=[go.Table(
-        columnorder=[1,2,3],
-        columnwidth=[360,360,720],
-        header=dict(values=["Test Name","Update time","Result"],
+        columnorder=[1,2],
+        columnwidth=[360,720],
+        header=dict(values=["Test Name","Result"],
                     fill_color='royalblue',
                     align='left',
                     font=dict(color='white',size=12),
                     height=50),
-        cells=dict(values=[results.name, results.last_update, results.message],
+        cells=dict(values=[results.name, results.message],
                    line_color=['darkslategray'],
                    fill_color=[results.color],
                    font_size=12,
@@ -145,9 +135,10 @@ def main(filenames, nrecords, maxfiles, nworkers, hd, warm):
                    height=30))
                           ]
                     )
+    fig.update_layout(title=dict(text=f"Latest Run,Trigger = ({run},{trigger})<br><sup>{trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
     fig.update_layout(height=len(results)*50,width=1500)
     #fig.update_layout(autosize=True)
-    fig.write_image(f"Tests_WIBS_results.png")
+    fig.write_image(f"{output_dir}/Tests_WIBS_results_run{run}_trigger{trigger}.{imgtype}")
     
 if __name__ == '__main__':
     main()

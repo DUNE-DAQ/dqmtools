@@ -6,14 +6,34 @@ from collections import defaultdict
 app = Flask(__name__)
 
 # Set the directory you want to serve the images from
-IMAGE_DIRECTORY = '/nfs/rscratch/wketchum/dqm_data/EventDisplays/'
+IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 
 # Store the last modification time
 last_mod_time = 0
-images = []
+
+def get_latest_WIBTests_files(directory):
+    
+    filename_regex = re.compile(r"Tests_WIBS_results_run(\d+)_trigger(\d+)\.svg")    
+    max_image = None
+    max_run = 0
+    max_trigger = 0
+    for filename in os.listdir(directory):
+        match = filename_regex.match(filename)
+        if match:
+            run = int(match.group(1))
+            trigger = int(match.group(2))
+            
+            # Check if this run and trigger number is larger than the current stored values
+            if (run > max_run) or (run == max_run and trigger > max_trigger):
+                max_run = run
+                max_trigger = trigger
+                max_image = filename
+                
+    return [ max_image ]
+
 
 def get_latest_EventDisplay_files(directory,select_apa=None,select_plane=None):
-
+    
     # Regular expression to parse the filenames
     filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
 
@@ -49,15 +69,6 @@ def get_latest_EventDisplay_files(directory,select_apa=None,select_plane=None):
     sorted_keys = sorted(max_images.keys(), key=lambda x: (x[0], x[1]))
     sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
     return sorted_images
-
-@app.before_request
-def check_for_new_images():
-    global last_mod_time, images
-    current_mod_time = os.path.getmtime(IMAGE_DIRECTORY)
-    if current_mod_time != last_mod_time:
-        last_mod_time = current_mod_time
-        #images = [f for f in os.listdir(IMAGE_DIRECTORY) if os.path.isfile(os.path.join(IMAGE_DIRECTORY, f))]
-        images = get_latest_EventDisplay_files(IMAGE_DIRECTORY)
         
 #@app.route('/')
 #def index():
@@ -70,14 +81,17 @@ def check_for_new_images():
 @app.route('/event_display/apa<apa>')
 @app.route('/event_display/apa<apa>_plane<plane>')
 def event_display(apa=None,plane=None):
-    global images
-    images = get_latest_EventDisplay_files(IMAGE_DIRECTORY, select_apa=apa, select_plane=plane)
-    print(images)
-    return render_template('event_display.html', images=images, apa=apa, plane=plane)
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY+"/EventDisplays", select_apa=apa, select_plane=plane)
+    return render_template('event_display.html', images=evd_images, apa=apa, plane=plane)
 
-@app.route('/images/<path:filename>')
-def serve_image(filename):
-    return send_from_directory(IMAGE_DIRECTORY, filename)
+@app.route('/tests/wibs')
+def tests_wibs():
+    test_images = get_latest_WIBTests_files(IMAGE_DIRECTORY+"/WIBTests")
+    return render_template('tests_wibs.html', images=test_images)
+
+@app.route('/images/<subdir>/<path:filename>')
+def serve_image(subdir,filename):
+    return send_from_directory(IMAGE_DIRECTORY+"/"+subdir, filename)
 
 import click
 @click.command()
