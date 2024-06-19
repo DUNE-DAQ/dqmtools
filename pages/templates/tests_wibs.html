@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NP04 EVENT DISPLAYS</title>
+    <title>NP04 DQM</title>
     <script>
         // Refresh the page every 30 seconds
         setInterval(function() {
@@ -28,23 +28,10 @@
     </style>
 </head>
 <body>
-    {% if plane %}
-    <h1>NP04 EVENT DISPLAYS: APA {{ apa }} Plane {{ plane }}</h1>
-    {% elif apa %}
-    <h1>NP04 EVENT DISPLAYS: APA {{ apa }}</h1>
-    {% else %}
-    <h1>NP04 EVENT DISPLAYS</h1>
-    {% endif %}
-    <strong><nav>
-	<ul class="menu">
-	  {% for apa_no in [1,2,3,4] %}
-	  <li><a href="{{ url_for('event_display',apa=apa_no) }}">APA {{ apa_no }} </a></li>	  
-	  {% endfor %}
-	</ul>
-    </nav></strong>
+    <h1>NP04 DQM Tests: WIBS</h1>
     {% for image in images %}
         <div class="image-container">
-            <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
+            <img src="{{ url_for('serve_image', subdir='WIBTests', filename=image) }}" alt="{{ image }}"/>
         </div>
     {% endfor %}
 </body>

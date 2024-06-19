@@ -11,6 +11,8 @@ import hdf5libs
 import concurrent.futures
 import os
 
+import pytz
+
 import click
 @click.command()
 @click.argument('input_data', type=click.Path(exists=True))
@@ -26,7 +28,7 @@ def main(input_data, output_dir, nworkers, nskip, imgtype):
     filename = input_data
     if(os.path.isdir(input_data)):
         files = os.listdir(input_data)
-        paths = [os.path.join(input_data, basename) for basename in files if basename.endswith(".writing")]
+        paths = [os.path.join(input_data, basename) for basename in files if not basename.endswith(".writing")]
         filename = max(paths, key=os.path.getctime)
 
     print(f'Opening file {filename}')
@@ -66,8 +68,10 @@ def main(input_data, output_dir, nworkers, nskip, imgtype):
     #    for plane in [0,1,2]:
     #        planes.append((apa,plane))
 
-    trigger_timestamp = df_dict["trh"]["trigger_time"].values[0]
-    print(trigger_timestamp)
+    df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
+    df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
+    trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
+    trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
 
     if tpc_det_key not in df_dict.keys():
         print("No tpc det waveforms in file.")
@@ -82,7 +86,7 @@ def main(input_data, output_dir, nworkers, nskip, imgtype):
                                   offset=True,make_static=True,make_tp_overlay=False,
                                   orientation="vertical",colorscale='plasma',color_range=(-256,256))
         print(f"Figure for {apa} plane {plane} processed...")
-        fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>{trigger_timestamp}</sup>", font=dict(size=24) ) )
+        fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>{trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
         fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}", scale=3)
         return f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}"
             
