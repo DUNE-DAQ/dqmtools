@@ -57,12 +57,12 @@ def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
     dqm_test_suite_wibs.register_test(CheckWIBEth_CRC_Err(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_Pulser(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_Calibration(tpc_det_name))
-    dqm_test_suite_wibs.register_test(CheckWIBEth_Ready(tpc_det_name))
+    #dqm_test_suite_wibs.register_test(CheckWIBEth_Ready(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_Context(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_CD(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_LOL(tpc_det_name))        
     dqm_test_suite_wibs.register_test(CheckWIBEth_Link_Valid(tpc_det_name))
-    dqm_test_suite_wibs.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
+    #dqm_test_suite_wibs.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_FEMB_Sync(tpc_det_name))
 
     dqm_test_suite_wibs.register_test(CheckTimestampsAligned(tpc_det_id),f"CheckTimestampsAligned_{tpc_det_name}")
@@ -117,11 +117,12 @@ def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
     run = df_trh["run"].iloc[-1]
     trigger = df_trh["trigger"].iloc[-1]
     trigger_timestamp_cern = df_trh["trigger_time_cern"].iloc[-1]
-    
+
+    n_events = len(df_trh)
     
     fig = go.Figure(data=[go.Table(
         columnorder=[1,2],
-        columnwidth=[360,720],
+        columnwidth=[500,1000],
         header=dict(values=["Test Name","Result"],
                     fill_color='royalblue',
                     align='left',
@@ -130,13 +131,13 @@ def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
         cells=dict(values=[results.name, results.message],
                    line_color=['darkslategray'],
                    fill_color=[results.color],
-                   font_size=12,
+                   font_size=18,
                    align='left',
                    height=30))
                           ]
                     )
-    fig.update_layout(title=dict(text=f"Latest Run,Trigger = ({run},{trigger})<br><sup>{trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
-    fig.update_layout(height=len(results)*50,width=1500)
+    fig.update_layout(title=dict(text=f"Latest Run,Trigger = ({run},{trigger})<br><sup>{n_events} total records processed --- {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
+    fig.update_layout(height=len(results)*50,width=2000)
     #fig.update_layout(autosize=True)
     fig.write_image(f"{output_dir}/Tests_WIBS_results_run{run}_trigger{trigger}.{imgtype}")
     

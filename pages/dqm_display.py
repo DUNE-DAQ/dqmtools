@@ -13,7 +13,7 @@ last_mod_time = 0
 
 def get_latest_WIBTests_files(directory):
     
-    filename_regex = re.compile(r"Tests_WIBS_results_run(\d+)_trigger(\d+)\.svg")    
+    filename_regex = re.compile(r"Tests_WIBS_results_run(\d+)_trigger(\d+)\.[^.]+")    
     max_image = None
     max_run = 0
     max_trigger = 0
