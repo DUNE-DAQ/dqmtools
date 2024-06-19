@@ -93,7 +93,7 @@ def heat_map_plot(df):
         
     df_map = np.zeros([10, 16])
     df_map[df['row_position'], df['col_position']] = df['trigger_count']
-    df_map = df_map[:, ::-1]
+    df_map = df_map[::-1, ::-1]
     df_map = pd.DataFrame(df_map, index = ['0', '1','2', '3', '4', '5', '6', '7', '8', '9'], columns=['15', '14', '13', '12', '11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'])
             
     fig = go.Figure(data=go.Heatmap(z=df_map,
