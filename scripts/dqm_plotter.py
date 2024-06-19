@@ -26,7 +26,7 @@ def main(input_data, output_dir, nworkers, nskip, imgtype):
     filename = input_data
     if(os.path.isdir(input_data)):
         files = os.listdir(input_data)
-        paths = [os.path.join(input_data, basename) for basename in files]
+        paths = [os.path.join(input_data, basename) for basename in files if basename.endswith(".writing")]
         filename = max(paths, key=os.path.getctime)
 
     print(f'Opening file {filename}')
