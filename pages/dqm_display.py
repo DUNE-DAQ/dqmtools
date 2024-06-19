@@ -11,6 +11,38 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 # Store the last modification time
 last_mod_time = 0
 
+def get_latest_pds_plots(directory):
+
+    filename_regex = [
+        re.compile(r"run(\d+)_(\d+)_Baseline.svg"),
+        re.compile(r"run(\d+)_(\d+)_RMS.svg"),
+        re.compile(r"run(\d+)_(\d+)_Waveform.svg"),
+        re.compile(r"run(\d+)_(\d+)_Heat.svg")
+    ]
+
+    max_images = defaultdict(lambda: {'run': -1, 'trigger': -1, 'filename': ''})
+
+    for filename in os.listdir(directory):
+        file_to_add = []
+        for file_regex in filename_regex:
+                match = file_regex.match(filename)
+                if match:
+                    run = int(match.group(1))
+                    run_id = int(match.group(2))
+                    key = (run, run_id, file_regex.pattern)
+                    
+                    if (run > max_images[key]['run']) or (run == max_images[key]['run'] and run_id > max_images[key]['run_id']):
+                        max_images[key]['run'] = run
+                        max_images[key]['run_id'] = run_id
+                        max_images[key]['filename'] = filename
+        sorted_keys = sorted(max_images.keys(), key=lambda x: (x[0], x[1]))
+        sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
+
+    return sorted_images
+    
+    
+
+
 def get_latest_WIBTests_files(directory):
     
     filename_regex = re.compile(r"Tests_WIBS_results_run(\d+)_trigger(\d+)\.[^.]+")    
@@ -88,6 +120,11 @@ def event_display(apa=None,plane=None):
 def tests_wibs():
     test_images = get_latest_WIBTests_files(IMAGE_DIRECTORY+"/WIBTests")
     return render_template('tests_wibs.html', images=test_images)
+
+@app.route('/pds')
+def pds():
+    images = get_latest_pds_plots(IMAGE_DIRECTORY+"/pds_plots")
+    return render_template("pds.html",images=images)
 
 @app.route('/images/<subdir>/<path:filename>')
 def serve_image(subdir,filename):

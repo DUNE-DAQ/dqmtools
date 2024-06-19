@@ -50,16 +50,18 @@ def dhf5_reader(path, file_list):
                 scr_id, trigger, channels, adcs = extract_fragment_info(frag)
                 
                 for index, ch in enumerate(channels):
-                    selected_adcs = np.array(adcs[index])[:262000] if trigger == 'full_stream' else np.array(adcs[index])
-    
-                    endpoint = find_endpoint(scr_id)
-                    output_list.append([trigger, endpoint, channels[index], selected_adcs])
-
+                    try:
+                        selected_adcs = np.array(adcs[index])[:187400] if trigger == 'full_stream' else np.array(adcs[index])
+                        
+                        endpoint = find_endpoint(scr_id)
+                        output_list.append([trigger, endpoint, channels[index], selected_adcs])
+                    except:
+                        print(f"Channel {ch} skipped getting adcs")
     return output_list
 
-def fig_creator(path):   
+def fig_creator(path,output_path):   
     files_list= os.listdir(path)
-    files_with_times = [(file, getmtime(join(path, file))) for file in files_list]
+    files_with_times = [(file, getmtime(join(path, file))) for file in files_list if not file.endswith(".writing")]
     sorted_files = sorted(files_with_times, key=lambda x: x[1], reverse=True)
     sorted_filenames = [file[0] for file in sorted_files]
 
@@ -75,25 +77,32 @@ def fig_creator(path):
     run   =file.split('_')[2]
     run_id=file.split('_')[3]
     
-    output_path = f'/nfs/rscratch/pds/plot/'
+    fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
+    fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
+    fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
+    heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
 
-    #fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
-    #fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
-    #fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
-    #heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
-
-    fig_baseline.write_image(f"00_00_Baseline.svg")
-    fig_rms.write_image(f"00_00_RMS.svg")
-    fig_waveform.write_image(f"00_00_Waveform.svg")
-    heat_map.write_image(f"00_00_Heat.svg")
+    #fig_baseline.write_image(f"{output_path}/00_00_Baseline.svg")
+    #fig_rms.write_image(f"{output_path}/00_00_RMS.svg")
+    #fig_waveform.write_image(f"{output_path}/00_00_Waveform.svg")
+    #heat_map.write_image(f"{output_path}/00_00_Heat.svg")
 
 @click.command()
-@click.option("--path", '-p', default = '/nfs/rscratch/np04daq/DQM_DATA/NP04/', help="Insert the desired file.")
-def main(path):
-    while True:
-        fig_creator(path)
-        print("Waiting for 5 minutes before the next update...")
-        time.sleep(5 * 60)  # Sleep for 10 minutes
+@click.argument('input_dir', type=click.Path(exists=True))
+@click.argument('output_dir', type=click.Path(exists=True))
+@click.option('--sleep', default=300, help="Time to sleep (in seconds) before next update (default 300s).")
+@click.option('--repeat', default=-1, help="Number of times to repeat (default infinite).")
+
+def main(input_dir,output_dir,sleep,repeat):
+
+    counter = 0
+    while counter!=repeat:
+        counter = counter+1
+        fig_creator(path=input_dir,output_path=output_dir)
+        if counter==repeat:
+            break
+        print(f"Waiting for {sleep} seconds before the next update...")
+        time.sleep(sleep)  # Sleep
 
 if __name__ == "__main__":
     main()
