@@ -16,8 +16,10 @@ from os.path import join, getmtime
 import numpy as np
 import pandas as pd
 import time
+import pytz
 
 from dqmtools.dqmpds import *
+import dqmtools.dataframe_creator as dfc
 
 def extract_fragment_info(frag):
     frh = frag.get_header()
@@ -44,7 +46,7 @@ def dhf5_reader(path, file_list):
         h5_file = HDF5RawDataFile(filename)
         records = h5_file.get_all_record_ids()
         
-        for r in tqdm(records, desc='Reading data records'):
+        for r in tqdm(records, desc=f'Reading data records from file {filename}'):
             pds_geo_ids = list(h5_file.get_geo_ids_for_subdetector(r, detdataformats.DetID.string_to_subdetector(det)))
             
             for gid in pds_geo_ids:
@@ -78,6 +80,22 @@ def fig_creator(path,output_path):
     file  =files_list[0]
     run   =file.split('_')[2]
     run_id=file.split('_')[3]
+
+    #get the timestamp...probably harder than it needs to be, but this code exists...
+    last_h5_file = HDF5RawDataFile(path+"/"+sorted_filenames[0])
+    last_record = last_h5_file.get_all_record_ids()[-1]
+
+    df_dict = {}
+    df_dict = dfc.process_record(last_h5_file,last_record,df_dict,MAX_WORKERS=10,ana_data_prescale=None,wvfm_data_prescale=None)
+    df_dict = dfc.concatenate_dataframes(df_dict)
+    df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
+    df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
+    trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
+    trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
+    
+    myfigs = [ ("Baseline",fig_baseline), ("RMS",fig_rms), ("Waveform",fig_waveform), ("Heatmap",heat_map) ]
+    for mytitle, fig in myfigs:
+        fig.update_layout(title=dict(text=f"{mytitle}<br><sup>Run {run}, Trigger {run_id}, {trigger_timestamp_cern} (CERN) </sup>", font=dict(size=24) ) )
     
     fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
     fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
