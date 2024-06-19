@@ -109,6 +109,6 @@ def df_channel_map(df):
     map_channel["row_position"] = map_channel["position"] - 10*map_channel["col_position"]
     map_channel["real_col_position"] = 15 - map_channel["col_position"] 
 
-    df = pd.merge(df, map_channel, how="left", on=["endpoint", "channel"])
+    df = pd.merge(df, map_channel, how="inner", on=["endpoint", "channel"])
 
     return df
