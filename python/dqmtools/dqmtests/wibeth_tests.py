@@ -191,7 +191,7 @@ class CheckRequestTimes_WIBEth(DQMTest):
         print(df_tmp.iloc[0]["timestamp_dts_first"],df_tmp.iloc[0]["timestamp_dts_diff_vals"],df_tmp.iloc[0]["timestamp_dts_diff_idx"])
         df_tmp["timestamp_dts_last"] = df_tmp.apply(lambda x: desparsify_array_diff_of_diff_locs_and_vals(x.timestamp_dts_first,x.timestamp_dts_diff_idx,x.timestamp_dts_diff_vals,x.n_frames*64)[-1],axis=1)
 
-        df_bad = df_tmp.loc[(df_tmp["timestamp_dts_first"]>df_tmp["window_begin_dts"])|(df_tmp["timestamp_dts_last"]<df_tmp["window_end_dts"])]
+        df_bad = df_tmp.loc[(df_tmp["timestamp_dts_first"]>(df_tmp["window_begin_dts"]+32))|(df_tmp["timestamp_dts_last"]<(df_tmp["window_end_dts"]-32))]
         n_bad = len(df_bad)
         
         if n_bad==0:

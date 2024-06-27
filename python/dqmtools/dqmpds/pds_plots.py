@@ -118,6 +118,13 @@ def heat_map_plot(df):
     ]
     for annotation in annotations:
         fig.add_annotation(annotation)
+   
+    for i in range(len(df)):  
+        endpoint = 100+df.loc[i, 'endpoint']
+        channel  = df.loc[i, 'channel']
+        col_pos  = 15-df.loc[i, 'col_position']
+        row_pos  = 9-df.loc[i, 'row_position']
+        fig.add_annotation(x=col_pos, y=row_pos, showarrow=False, text=f'{endpoint}-{channel}', font=dict(size=10, color='black')) 
     
     fig.update_layout(
         width=1000,

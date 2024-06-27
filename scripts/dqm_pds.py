@@ -97,11 +97,14 @@ def fig_creator(path,output_path):
     for mytitle, fig in myfigs:
         fig.update_layout(title=dict(text=f"{mytitle}<br><sup>Run {run}, Trigger {run_id}, {trigger_timestamp_cern} (CERN) </sup>", font=dict(size=24) ) )
     
-    fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
-    fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
-    fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
-    heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
+    try:
+        fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
+        fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
+        fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
+        heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
 
+    except:
+        print('No PDS data!')
     #fig_baseline.write_image(f"{output_path}/00_00_Baseline.svg")
     #fig_rms.write_image(f"{output_path}/00_00_RMS.svg")
     #fig_waveform.write_image(f"{output_path}/00_00_Waveform.svg")
@@ -118,7 +121,10 @@ def main(input_dir,output_dir,sleep,repeat):
     counter = 0
     while counter!=repeat:
         counter = counter+1
-        fig_creator(path=input_dir,output_path=output_dir)
+        try:
+            fig_creator(path=input_dir,output_path=output_dir)
+        except:
+            print(f"Analysis failed. Exception caught and will try again after sleep.")
         if counter==repeat:
             break
         print(f"Waiting for {sleep} seconds before the next update...")
