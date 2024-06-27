@@ -47,6 +47,7 @@ def df_data(input_list):
     if len(input_list) > 80000: input_list = input_list[:80000]
     input_list = sorted(input_list, key=lambda row: (row[1], row[2]))
 
+    
     reference_endpoint = input_list[0][1]
     reference_channel  = input_list[0][2]
 
