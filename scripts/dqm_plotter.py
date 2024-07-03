@@ -60,8 +60,9 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         df_dict = dfc.process_record(h5_file,rid,df_dict,MAX_WORKERS=nworkers,ana_data_prescale=1,wvfm_data_prescale=1)
         df_dict = dfc.concatenate_dataframes(df_dict)
         
-        
         print(f"Finished creating dataframes.")
+
+        print(df_dict["trh"])
         
         tpc_det_key="detd_kHD_TPC_kWIBEth"
         offset=True
