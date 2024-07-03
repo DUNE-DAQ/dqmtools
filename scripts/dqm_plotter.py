@@ -62,6 +62,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         
         print(f"Finished creating dataframes.")
 
+        pd.set_option('display.max_columns', None)
         print(df_dict["trh"])
         
         tpc_det_key="detd_kHD_TPC_kWIBEth"
@@ -91,6 +92,11 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
         trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
         trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
+
+        trigger_types_str = "("
+        for tname in df_dict["trh"]["trigger_type_names"].iloc[0]:
+            trigger_types_str = trigger_types_str + tname + ","
+        trigger_types_str=trigger_types_str[:-1]+")"
         
         if tpc_det_key not in df_dict.keys():
             print("No tpc det waveforms in file.")
@@ -105,7 +111,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
                                       offset=True,make_static=True,make_tp_overlay=False,
                                       orientation="vertical",colorscale='plasma',color_range=(-256,256))
             print(f"Figure for {apa} plane {plane} processed...")
-            fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>{trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
+            fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
             fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}", scale=3)
             return f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}"
         
