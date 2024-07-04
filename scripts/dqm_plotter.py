@@ -94,8 +94,8 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
 
         trigger_types_str = "("
-        for tname in df_dict["trh"]["trigger_type_names"].iloc[0]:
-            trigger_types_str = trigger_types_str + tname + ","
+        for trigtype in df_dict["trh"]["trigger_type_bits"].iloc[0]:
+            trigger_types_str = trigger_types_str + trigtype.name[1:] + ","
         trigger_types_str=trigger_types_str[:-1]+")"
         
         if tpc_det_key not in df_dict.keys():
