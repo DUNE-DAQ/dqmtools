@@ -25,21 +25,31 @@ def extract_fragment_info(frag):
     frh = frag.get_header()
     scr_id = frh.element_id.id
     fragType = frh.fragment_type
+    window_begin_dts = frh.window_begin
+
+    #trh     = trig.get_header()
+    #trigger_timestamp = trh.trigger_timestamp
+    
+    #daq_pretrigger    = window_begin_dts - trigger_timestamp
 
     if fragType == FragmentType.kDAPHNE.value:  # For self trigger
         trigger = 'self_trigger'
         adcs = np_array_adc(frag)
         channels = np_array_channels(frag)
+        #timestamps = np_array_timestamp(frag)
     elif fragType == 13:  # For full_stream
         trigger = 'full_stream'
         adcs = np_array_adc_stream(frag).transpose()
         channels = np_array_channels_stream(frag)[0]
+        #timestamps = np_array_timestamp_stream(frag)[0]*len(channels_frag)
 
-    return scr_id, trigger, channels, adcs
+    return scr_id, trigger, channels, adcs#, timestamps
 
 def dhf5_reader(path, file_list):
     det = 'HD_PDS'
     output_list = []
+
+    not_working_channels = ['105-12', '109-10', '109-11', '109-13', '109-14', '109-16', '109-17']
 
     for file in file_list:
         filename = f'{path}/{file}'
@@ -51,14 +61,17 @@ def dhf5_reader(path, file_list):
             
             for gid in pds_geo_ids:
                 frag = h5_file.get_frag(r, gid)
-                scr_id, trigger, channels, adcs = extract_fragment_info(frag)
+                #scr_id, trigger, channels, adcs, timestamps = extract_fragment_info(frag)
+                scr_id, trigger, channels, adcs= extract_fragment_info(frag)
                 
                 for index, ch in enumerate(channels):
                     try:
                         selected_adcs = np.array(adcs[index])[:187400] if trigger == 'full_stream' else np.array(adcs[index])
                         
                         endpoint = find_endpoint(scr_id)
-                        output_list.append([trigger, endpoint, channels[index], selected_adcs])
+
+                        if f'{endpoint}-{ch}' not in not_working_channels:
+                            output_list.append([trigger, endpoint, channels[index], selected_adcs])#, timestamps])
                     except:
                         print(f"Channel {ch} skipped getting adcs")
     return output_list
@@ -75,7 +88,8 @@ def fig_creator(path,output_path):
     map_df    = df_channel_map(df)
     fig_baseline, fig_rms = baseline_rms_plot(map_df)
     fig_waveform = waveforms_plot(map_df)
-    heat_map  = heat_map_plot(map_df)
+    trigger_heat_map  = heat_map_plot(map_df)
+    amplitude_heat_map = heat_map_plot(map_df, 'peak')
 
     file  =sorted_filenames[0]
     run   =file.split('_')[2]
@@ -93,7 +107,7 @@ def fig_creator(path,output_path):
     trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
     trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
     
-    myfigs = [ ("Baseline",fig_baseline), ("RMS",fig_rms), ("Waveform",fig_waveform), ("Heatmap",heat_map) ]
+    myfigs = [ ("Baseline",fig_baseline), ("RMS",fig_rms), ("Waveform",fig_waveform), ("Trigger Heatmap",trigger_heat_map), ("Amplitude Heatmap",amplitude_heat_map) ]
     for mytitle, fig in myfigs:
         fig.update_layout(title=dict(text=f"{mytitle}<br><sup>Run {run}, Trigger {run_id}, {trigger_timestamp_cern} (CERN) </sup>", font=dict(size=24) ) )
     
@@ -101,14 +115,11 @@ def fig_creator(path,output_path):
         fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
         fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
         fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
-        heat_map.write_image(f"{output_path}/{run}_{run_id}_Heat.svg")
+        trigger_heat_map.write_image(f"{output_path}/{run}_{run_id}_Trigger.svg")
+        amplitude_heat_map.write_image(f"{output_path}/{run}_{run_id}_Amplitude.svg")
 
     except:
         print('No PDS data!')
-    #fig_baseline.write_image(f"{output_path}/00_00_Baseline.svg")
-    #fig_rms.write_image(f"{output_path}/00_00_RMS.svg")
-    #fig_waveform.write_image(f"{output_path}/00_00_Waveform.svg")
-    #heat_map.write_image(f"{output_path}/00_00_Heat.svg")
 
 @click.command()
 @click.argument('input_dir', type=click.Path(exists=True))
@@ -121,10 +132,10 @@ def main(input_dir,output_dir,sleep,repeat):
     counter = 0
     while counter!=repeat:
         counter = counter+1
-        try:
-            fig_creator(path=input_dir,output_path=output_dir)
-        except:
-            print(f"Analysis failed. Exception caught and will try again after sleep.")
+        #try:
+        fig_creator(path=input_dir,output_path=output_dir)
+        #except:
+            #print(f"Analysis failed. Exception caught and will try again after sleep.")
         if counter==repeat:
             break
         print(f"Waiting for {sleep} seconds before the next update...")
