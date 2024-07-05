@@ -132,10 +132,10 @@ def main(input_dir,output_dir,sleep,repeat):
     counter = 0
     while counter!=repeat:
         counter = counter+1
-        #try:
-        fig_creator(path=input_dir,output_path=output_dir)
-        #except:
-            #print(f"Analysis failed. Exception caught and will try again after sleep.")
+        try:
+            fig_creator(path=input_dir,output_path=output_dir)
+        except:
+            print(f"Analysis failed. Exception caught and will try again after sleep.")
         if counter==repeat:
             break
         print(f"Waiting for {sleep} seconds before the next update...")
