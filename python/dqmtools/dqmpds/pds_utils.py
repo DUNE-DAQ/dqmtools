@@ -31,7 +31,13 @@ def check_pulses(vector, limit, trigger):
         vector = np.array(vector)
     baseline = calculate_baseline_rms('baseline', vector, limit)
     pulse    = baseline - np.array(vector)
-    return 1 if trigger == "self_trigger" and np.max(pulse) > 6 else 0
+    #return 1 if trigger == "self_trigger" and np.max(pulse) > 6 else 0
+    return 1 if np.max(pulse) > 6 else 0
+        
+def find_peak(vector):
+    if isinstance(vector, (list, np.ndarray)):  # Check if the input is a list or array
+        vector = np.array(vector)
+    return np.max(calculate_baseline_rms('baseline', vector, 50) - vector)
 
 def calculate_fft(sig):
     dt = 16e-9
@@ -46,8 +52,7 @@ def calculate_fft(sig):
 def df_data(input_list):
     if len(input_list) > 80000: input_list = input_list[:80000]
     input_list = sorted(input_list, key=lambda row: (row[1], row[2]))
-
-    
+ 
     reference_endpoint = input_list[0][1]
     reference_channel  = input_list[0][2]
 
@@ -65,6 +70,7 @@ def df_data(input_list):
         baseline      = calculate_baseline_rms('baseline', np.array(line[3])[:50], 50)
         adcs          = baseline - np.array(line[3])
         trigger_count = check_pulses(line[3][120:150], 50, trigger)
+        #timestamp     = line[4]
 
         if endpoint == reference_endpoint and channel == reference_channel:
             if total_adcs is not None:  # Check if total_adcs is initialized
@@ -89,10 +95,11 @@ def df_data(input_list):
         if index == len(input_list) - 1:
             result.append([reference_endpoint, reference_channel, total_adcs/count, total_baseline/ count, total_trigger])
             
-    df = pd.DataFrame(result, columns=['endpoint', 'channel', 'waveforms', 'baseline', 'trigger_count'])
+    df = pd.DataFrame(result, columns=['endpoint', 'channel', 'waveforms', 'baseline', 'trigger'])
     df['endpoint'] = df['endpoint'].astype(int)-100
     df['channel']  = df['channel'].astype(int)
     df['rms']      = df.apply(lambda x: calculate_baseline_rms('rms', x['waveforms'][:50], 50), axis=1)
+    df['peak']     = df.apply(lambda x: find_peak(x['waveforms']), axis=1)
     return df
 
 def df_channel_map(df):
