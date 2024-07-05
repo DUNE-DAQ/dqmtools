@@ -83,16 +83,15 @@ def waveforms_plot(df):
 
     return fig
 
-def heat_map_plot(df):
-    print('Creating trigger heat map')
-
-    if 'trigger_count' not in df.columns:
-        df['trigger_count']  = df.apply(lambda x: check_pulses(x['waveforms'], 50, 'self_trigger'), axis=1)
+def heat_map_plot(df, collumn = 'trigger'):
+    
+    if 'trigger' not in df.columns:
+        df['trigger']  = df.apply(lambda x: check_pulses(x['waveforms'], 50, 'self_trigger'), axis=1)
         df['endpoint'] = df.apply(lambda x: int(find_endpoint(x['src_id']))-100, axis=1)
-        df = df.groupby(['endpoint', 'channel', 'row_position', 'col_position'])['trigger_count'].sum().reset_index()
+        df = df.groupby(['endpoint', 'channel', 'row_position', 'col_position'])['trigger'].sum().reset_index()
         
     df_map = np.zeros([10, 16])
-    df_map[df['row_position'], df['col_position']] = df['trigger_count']
+    df_map[df['row_position'], df['col_position']] = df[collumn]
     df_map = df_map[::-1, ::-1]
     df_map = pd.DataFrame(df_map, index = ['0', '1','2', '3', '4', '5', '6', '7', '8', '9'], columns=['15', '14', '13', '12', '11', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', '0'])
             
@@ -110,11 +109,11 @@ def heat_map_plot(df):
         fig.add_shape(shape)
     
     annotations = [
-        dict(x=2, y=-1, text="APA 1", showarrow=False, font=dict(size=12, color='black')),
-        dict(x=6, y=-1, text="APA 2", showarrow=False, font=dict(size=12, color='black')),
+        dict(x=2, y=-1,  text="APA 1", showarrow=False, font=dict(size=12, color='black')),
+        dict(x=6, y=-1,  text="APA 2", showarrow=False, font=dict(size=12, color='black')),
         dict(x=10, y=-1, text="APA 3", showarrow=False, font=dict(size=12, color='black')),
         dict(x=14, y=-1, text="APA 4", showarrow=False, font=dict(size=12, color='black')),
-        dict(x=8, y=-2, text=f"Trigger Heat Map", showarrow=False, font=dict(size=12, color='black'))
+        dict(x=8, y=-2, text=f"{collumn} Heat Map", showarrow=False, font=dict(size=12, color='black'))
     ]
     for annotation in annotations:
         fig.add_annotation(annotation)
