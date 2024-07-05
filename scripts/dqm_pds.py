@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+
+from hdf5libs import HDF5RawDataFile
+
+import os
+import detdataformats
+import click
+
+from daqdataformats import FragmentType
+from rawdatautils.unpack.daphne import *
+from tqdm import tqdm
+
+import os
+from os.path import join, getmtime
+
+import numpy as np
+import pandas as pd
+import time
+import pytz
+
+from dqmtools.dqmpds import *
+import dqmtools.dataframe_creator as dfc
+
+def extract_fragment_info(frag):
+    frh = frag.get_header()
+    scr_id = frh.element_id.id
+    fragType = frh.fragment_type
+    window_begin_dts = frh.window_begin
+
+    #trh     = trig.get_header()
+    #trigger_timestamp = trh.trigger_timestamp
+    
+    #daq_pretrigger    = window_begin_dts - trigger_timestamp
+
+    if fragType == FragmentType.kDAPHNE.value:  # For self trigger
+        trigger = 'self_trigger'
+        adcs = np_array_adc(frag)
+        channels = np_array_channels(frag)
+        #timestamps = np_array_timestamp(frag)
+    elif fragType == 13:  # For full_stream
+        trigger = 'full_stream'
+        adcs = np_array_adc_stream(frag).transpose()
+        channels = np_array_channels_stream(frag)[0]
+        #timestamps = np_array_timestamp_stream(frag)[0]*len(channels_frag)
+
+    return scr_id, trigger, channels, adcs#, timestamps
+
+def dhf5_reader(path, file_list):
+    det = 'HD_PDS'
+    output_list = []
+
+    not_working_channels = ['105-12', '109-10', '109-11', '109-13', '109-14', '109-16', '109-17']
+
+    for file in file_list:
+        filename = f'{path}/{file}'
+        h5_file = HDF5RawDataFile(filename)
+        records = h5_file.get_all_record_ids()
+        
+        for r in tqdm(records, desc=f'Reading data records from file {filename}'):
+            pds_geo_ids = list(h5_file.get_geo_ids_for_subdetector(r, detdataformats.DetID.string_to_subdetector(det)))
+            
+            for gid in pds_geo_ids:
+                frag = h5_file.get_frag(r, gid)
+                #scr_id, trigger, channels, adcs, timestamps = extract_fragment_info(frag)
+                scr_id, trigger, channels, adcs= extract_fragment_info(frag)
+                
+                for index, ch in enumerate(channels):
+                    try:
+                        selected_adcs = np.array(adcs[index])[:187400] if trigger == 'full_stream' else np.array(adcs[index])
+                        
+                        endpoint = find_endpoint(scr_id)
+
+                        if f'{endpoint}-{ch}' not in not_working_channels:
+                            output_list.append([trigger, endpoint, channels[index], selected_adcs])#, timestamps])
+                    except:
+                        print(f"Channel {ch} skipped getting adcs")
+    return output_list
+
+def fig_creator(path,output_path):   
+    files_list= os.listdir(path)
+    files_with_times = [(file, getmtime(join(path, file))) for file in files_list if not file.endswith(".writing")]
+    sorted_files = sorted(files_with_times, key=lambda x: x[1], reverse=True)
+    sorted_filenames = [file[0] for file in sorted_files]
+
+    last_4_files = sorted_filenames[:4]
+    data_list = dhf5_reader(path, last_4_files)
+    df        = df_data(data_list)
+    map_df    = df_channel_map(df)
+    fig_baseline, fig_rms = baseline_rms_plot(map_df)
+    fig_waveform = waveforms_plot(map_df)
+    trigger_heat_map  = heat_map_plot(map_df)
+    amplitude_heat_map = heat_map_plot(map_df, 'peak')
+
+    file  =sorted_filenames[0]
+    run   =file.split('_')[2]
+    run_id=file.split('_')[3]
+
+    #get the timestamp...probably harder than it needs to be, but this code exists...
+    last_h5_file = HDF5RawDataFile(path+"/"+sorted_filenames[0])
+    last_record = last_h5_file.get_all_record_ids()[-1]
+
+    df_dict = {}
+    df_dict = dfc.process_record(last_h5_file,last_record,df_dict,MAX_WORKERS=10,ana_data_prescale=None,wvfm_data_prescale=None)
+    df_dict = dfc.concatenate_dataframes(df_dict)
+    df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
+    df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
+    trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
+    trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
+    
+    myfigs = [ ("Baseline",fig_baseline), ("RMS",fig_rms), ("Waveform",fig_waveform), ("Trigger Heatmap",trigger_heat_map), ("Amplitude Heatmap",amplitude_heat_map) ]
+    for mytitle, fig in myfigs:
+        fig.update_layout(title=dict(text=f"{mytitle}<br><sup>Run {run}, Trigger {run_id}, {trigger_timestamp_cern} (CERN) </sup>", font=dict(size=24) ) )
+    
+    try:
+        fig_baseline.write_image(f"{output_path}/{run}_{run_id}_Baseline.svg")
+        fig_rms.write_image(f"{output_path}/{run}_{run_id}_RMS.svg")
+        fig_waveform.write_image(f"{output_path}/{run}_{run_id}_Waveform.svg")
+        trigger_heat_map.write_image(f"{output_path}/{run}_{run_id}_Trigger.svg")
+        amplitude_heat_map.write_image(f"{output_path}/{run}_{run_id}_Amplitude.svg")
+
+    except:
+        print('No PDS data!')
+
+@click.command()
+@click.argument('input_dir', type=click.Path(exists=True))
+@click.argument('output_dir', type=click.Path(exists=True))
+@click.option('--sleep', default=300, help="Time to sleep (in seconds) before next update (default 300s).")
+@click.option('--repeat', default=-1, help="Number of times to repeat (default infinite).")
+
+def main(input_dir,output_dir,sleep,repeat):
+
+    counter = 0
+    while counter!=repeat:
+        counter = counter+1
+        try:
+            fig_creator(path=input_dir,output_path=output_dir)
+        except:
+            print(f"Analysis failed. Exception caught and will try again after sleep.")
+        if counter==repeat:
+            break
+        print(f"Waiting for {sleep} seconds before the next update...")
+        time.sleep(sleep)  # Sleep
+
+if __name__ == "__main__":
+    main()

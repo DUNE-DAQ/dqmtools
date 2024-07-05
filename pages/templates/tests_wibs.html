@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>NP04 DQM Tests: WIBS!!!</h1>
+{% for image in images %}
+<div class="image-container">
+  <img src="{{ url_for('serve_image', subdir='WIBTests', filename=image) }}" alt="{{ image }}"/>
+</div>
+{% endfor %}
+
+{% endblock %}
