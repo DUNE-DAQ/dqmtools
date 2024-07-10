@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NP04 DQM</title>
+    <script>
+        // Refresh the page every 30 seconds
+        setInterval(function() {
+            window.location.reload();
+        }, 30000);
+    </script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: left;
+        }
+        .content {
+            margin-left: 260px;
+            padding: 20px;
+            width: 90%;
+        }
+        .image-container {
+            text-align: left;
+            margin: 20px;
+        }
+        img {
+            width: 80%;
+            height: auto;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .sidebar {
+            height: 100vh;
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: #111;
+            padding-top: 20px;
+            overflow-x: hidden;
+        }
+        .sidebar a {
+            padding: 10px 15px;
+            text-decoration: none;
+            font-size: 18px;
+            color: white;
+            display: block;
+        }
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+    </style>
+</head>
+<body>
+  <div class="sidebar">
+    <ul class="menu">
+      {% for apa_no in [1,2,3,4] %}
+      <li><a href="{{ url_for('event_display',apa=apa_no) }}">APA {{ apa_no }} Displays</a></li>	  
+      {% endfor %}
+    </ul>
+    <ul class="menu">
+      <li><a href="{{ url_for('tests_wibs') }}">TPC WIB Test Results</a></li>
+    </ul>
+    <ul class="menu">
+      <li><a href="{{ url_for('pds') }}">PDS Plots</a></li>
+    </ul>
+  </div>
+  <div class="content">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
