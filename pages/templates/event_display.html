@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% if plane %}
+<h1>NP04 EVENT DISPLAYS: APA {{ apa }} Plane {{ plane }}</h1>
+{% elif apa %}
+<h1>NP04 EVENT DISPLAYS: APA {{ apa }}</h1>
+{% else %}
+<h1>NP04 EVENT DISPLAYS</h1>
+{% endif %}
+{% for image in images %}
+<div class="image-container">
+  <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
+</div>
+{% endfor %}
+
+{% endblock %}

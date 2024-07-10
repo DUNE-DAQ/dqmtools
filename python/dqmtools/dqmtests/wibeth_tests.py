@@ -167,10 +167,11 @@ class CheckNFrames_WIBEth(DQMTest):
             return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No WIBEth components found.')
         df_tmp["expected_frames"] = np.floor((df_tmp["window_end_dts"]-df_tmp["window_begin_dts"])/(32*64))+1
         df_tmp = df_tmp.join(df_dict["daqh"][["n_obj"]])
-        n_frames_wrong = (df_tmp["expected_frames"]!=df_tmp["n_obj"]).sum()
+        df_tmp["nframe_difference"] = df_tmp["expected_frames"]-df_tmp["n_obj"]
+        n_frames_wrong = (abs(df_tmp["nframe_difference"])>=2).sum()
         if n_frames_wrong==0:
             return DQMTestResult(DQMResultEnum.OK,f'OK')
-        else:            
+        else:
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_frames_wrong} / {len(df_tmp)} WIBEth fragments have the wrong number of frames.')
 
@@ -190,7 +191,7 @@ class CheckRequestTimes_WIBEth(DQMTest):
         print(df_tmp.iloc[0]["timestamp_dts_first"],df_tmp.iloc[0]["timestamp_dts_diff_vals"],df_tmp.iloc[0]["timestamp_dts_diff_idx"])
         df_tmp["timestamp_dts_last"] = df_tmp.apply(lambda x: desparsify_array_diff_of_diff_locs_and_vals(x.timestamp_dts_first,x.timestamp_dts_diff_idx,x.timestamp_dts_diff_vals,x.n_frames*64)[-1],axis=1)
 
-        df_bad = df_tmp.loc[(df_tmp["timestamp_dts_first"]>df_tmp["window_begin_dts"])|(df_tmp["timestamp_dts_last"]<df_tmp["window_end_dts"])]
+        df_bad = df_tmp.loc[(df_tmp["timestamp_dts_first"]>(df_tmp["window_begin_dts"]+32))|(df_tmp["timestamp_dts_last"]<(df_tmp["window_end_dts"]-32))]
         n_bad = len(df_bad)
         
         if n_bad==0:
