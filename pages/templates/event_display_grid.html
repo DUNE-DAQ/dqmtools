@@ -2,9 +2,14 @@
 
 {% block content %}
 
-<h1>NP04 EVENT DISPLAYS: APA {{ apa }} GRID</h1>
-
 <div class="grid-container">
+
+  <div class="row">
+    <div class="col-md-12">
+      <h1>NP04 EVENT DISPLAYS: APA {{ apa }} GRID</h1>
+    </div>
+  </div>
+
   <div class="row">
     {% for image in images %}
     <div class="col-md-4" style="padding-left: 0; padding-right: 0">
@@ -14,6 +19,7 @@
     </div>
     {% endfor %}
   </div>
+
 </div>
 
 {% endblock %}
