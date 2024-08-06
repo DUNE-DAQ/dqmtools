@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory, render_template_string, render_template
+from flask import Flask, send_from_directory, render_template_string, render_template, request 
 import re
 import os
 from collections import defaultdict
@@ -104,9 +104,20 @@ def index():
 @app.route('/event_display/')
 @app.route('/event_display/apa<apa>')
 @app.route('/event_display/apa<apa>_plane<plane>')
-def event_display(apa=None,plane=None):
-    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY+"/EventDisplays", select_apa=apa, select_plane=plane)
+def event_display(apa=None, plane=None):
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_apa=apa, select_plane=plane)
     return render_template('event_display.html', images=evd_images, apa=apa, plane=plane)
+
+@app.route('/event_display_grid/apa<apa>')
+def event_display_grid(apa=None):
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_apa=apa)
+    return render_template('event_display_grid.html', images=evd_images, apa=apa)
+
+@app.route('/event_display_plane/plane<plane>')
+def event_display_plane(plane=None):
+    if plane is None: plane = 2
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY+"/EventDisplays", select_plane=plane)
+    return render_template('event_display_plane.html', images=evd_images, plane=plane)
 
 @app.route('/tests/wibs')
 def tests_wibs():
