@@ -2,10 +2,15 @@
 
 {% block content %}
 
-<h1>NP04 EVENT DISPLAYS: Plane {{ plane }} GRID</h1>
+<div class="grid-container">
 
-  <div class="grid-container">
-    <div class="row">
+  <div class="row">
+    <div class="col-md-12">
+      <h1>NP04 EVENT DISPLAYS: Plane {{ plane }} GRID</h1>
+    </div>
+  </div>
+
+  <div class="row">
 
     {% for APA in range (0, images|length ) %}
 
@@ -23,7 +28,8 @@
 
     {% endfor %}
 
-    </div>
   </div>
+  
+</div>
 
 {% endblock %}
