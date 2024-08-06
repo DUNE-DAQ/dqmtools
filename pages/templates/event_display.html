@@ -9,6 +9,7 @@
 {% else %}
 <h1>NP04 EVENT DISPLAYS</h1>
 {% endif %}
+
 {% for image in images %}
 <div class="image-container">
   <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>

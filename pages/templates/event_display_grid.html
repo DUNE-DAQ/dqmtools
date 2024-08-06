@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>NP04 EVENT DISPLAYS: APA {{ apa }} GRID</h1>
+
+<div class="grid-container">
+  <div class="row">
+    {% for image in images %}
+    <div class="col-md-4" style="padding-left: 0; padding-right: 0">
+      <div class="grid-image-container">
+        <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
