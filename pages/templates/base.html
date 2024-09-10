@@ -51,7 +51,7 @@
             position: absolute; /* Ensure dropdowns are positioned absolutely */
             top: 100%; /* Position below the dropdown toggle */
             left: 0; /* Align with the dropdown toggle */
-            background-color: #222;
+            background-color: #343a40 !important;
             border: none;
             z-index: 1100; /* Ensure dropdown menus are above the sidebar and content */
             white-space: nowrap; /* Prevent dropdown items from wrapping */
@@ -60,8 +60,17 @@
             overflow: visible; /* Ensure dropdowns appear above content */
         }
 
+	/* Style for the dropdown items */
         .dropdown-item {
-            white-space: nowrap; /* Prevent wrapping of text */
+            color: #fff; /* Text color for the dropdown items */
+            background-color: #343a40 !important; /* Background color for the dropdown items */
+	    white-space: nowrap; /* Prevent wrapping of text */
+        }
+
+        /* Optional: Style for the dropdown items when hovered */
+        .dropdown-item:hover {
+            color: #fff; /* Text color when hovered */
+            background-color: #666 !important; /* Background color when hovered */
         }
 
         /* Content margin to avoid overlap with fixed sidebar */
