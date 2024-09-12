@@ -1,11 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>NP04 DQM Tests: WIBS!!!</h1>
-{% for image in images %}
-<div class="image-container">
-  <img src="{{ url_for('serve_image', subdir='WIBTests', filename=image) }}" alt="{{ image }}"/>
-</div>
-{% endfor %}
 
+<div class="grid-container">
+
+  <div class="row">
+    <div class="col-md-12">
+
+      <h1>NP04 DQM Tests: WIBS!!!</h1>
+
+    </div>
+  </div>
+
+ 
+  {% for image in images %}
+  <div class="row">
+    <div class="image-container">
+      <img src="{{ url_for('serve_image', subdir='WIBTests', filename=image) }}" alt="{{ image }}"/>
+    </div>
+  </div>
+  {% endfor %}
+
+</div>
 {% endblock %}
