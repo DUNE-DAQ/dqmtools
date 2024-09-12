@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="grid-container">
+
+  <div class="row">
+    <div class="col-md-12">
+      <h1>NP04 EVENT DISPLAYS: Plane {{ plane }} GRID</h1>
+    </div>
+  </div>
+
+  <div class="row">
+
+    {% for APA in range (0, images|length ) %}
+
+      <div class="col-md-6">
+        <div class="grid-image-container">
+          {% if plane == '2' and APA == 0 %}
+          {# Modify the string as needed #}
+          {% set modified_filename = images[APA] | replace('plane2', 'plane1') %}
+	  <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=modified_filename) }}" alt="alt"/>
+          {% else %}
+          <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=images[APA]) }}" alt="alt"/>
+          {% endif %}
+        </div>
+      </div>
+
+    {% endfor %}
+
+  </div>
+  
+</div>
+
+{% endblock %}
