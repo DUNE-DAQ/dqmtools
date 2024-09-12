@@ -6,25 +6,19 @@
 
   <div class="row">
     <div class="col-md-12">
-
-      {% if plane %}
-      <h1>NP04 EVENT DISPLAYS: APA {{ apa }} Plane {{ plane }}</h1>
-      {% elif apa %}
-      <h1>NP04 EVENT DISPLAYS: APA {{ apa }}</h1>
-      {% else %}
-      <h1>NP04 EVENT DISPLAYS</h1>
-      {% endif %}
-
+      <h1>NP04 EVENT DISPLAYS: APA {{ apa }} GRID</h1>
     </div>
   </div>
 
+  <div class="row">
     {% for image in images %}
-    <div class="row">
-      <div class="image-container">
+    <div class="col-md-4" style="padding-left: 0; padding-right: 0">
+      <div class="grid-image-container">
         <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
       </div>
     </div>
     {% endfor %}
+  </div>
 
 </div>
 

@@ -2,11 +2,24 @@
 
 {% block content %}
 
-<h1>NP04 DQM: PDS PLOTS!!</h1>
-{% for image in images %}
-<div class="image-container">
-  <img src="{{ url_for('serve_image', subdir='pds_plots', filename=image) }}" alt="{{ image }}"/>
+<div class="grid-container">
+
+  <div class="row">
+    <div class="col-md-12">
+
+      <h1>NP04 DQM: PDS PLOTS!!</h1>
+
+    </div>
+  </div>
+
+  {% for image in images %}
+  <div class="row">
+    <div class="image-container">
+      <img src="{{ url_for('serve_image', subdir='pds_plots', filename=image) }}" alt="{{ image }}"/>
+    </div>
+  </div>
+  {% endfor %}
+
 </div>
-{% endfor %}
 
 {% endblock %}
