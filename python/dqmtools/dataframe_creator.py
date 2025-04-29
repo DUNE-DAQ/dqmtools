@@ -48,7 +48,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
         map_name = ""
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDBottomTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -73,7 +73,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDBottomTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -89,7 +89,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDBottomTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -105,7 +105,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDBottomTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
