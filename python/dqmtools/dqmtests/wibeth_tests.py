@@ -250,8 +250,8 @@ class CheckRMS_WIBEth(DQMTest):
             if self.verbose:
                 print("CHANNELS FAILING RMS CHECK")
                 print(f"operator {str(self.operator)} ({self.operator.__doc__})")
-                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","apa","plane"]].drop_duplicates(["channel"]),on=["channel"])
-                print(tabulate(df_tmp.reset_index()[["channel","adc_rms","apa","plane","threshold"]],
+                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","element","plane"]].drop_duplicates(["channel"]),on=["channel"])
+                print(tabulate(df_tmp.reset_index()[["channel","adc_rms","element","plane","threshold"]],
                                headers=["Channel","RMS","APA/CRP","Plane","Threshold"],
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
@@ -305,8 +305,8 @@ class CheckPedestal_WIBEth(DQMTest):
         else:
             if self.verbose:
                 print("CHANNELS FAILING PEDESTAL CHECK")
-                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","apa","plane"]].drop_duplicates(["channel"]),on=["channel"])
-                print(tabulate(df_tmp.reset_index()[["channel","adc_mean","apa","plane","lower_bound","upper_bound"]],
+                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","element","plane"]].drop_duplicates(["channel"]),on=["channel"])
+                print(tabulate(df_tmp.reset_index()[["channel","adc_mean","element","plane","lower_bound","upper_bound"]],
                                headers=["Channel","Pedestal","APA/CRP","Plane","Lower Bound","Upper Bound"],
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
