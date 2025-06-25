@@ -35,7 +35,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
         map_name = ""
         if op_env=="np04hd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
@@ -48,7 +48,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
         map_name = ""
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -67,13 +67,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
     elif(frag_type==daqdataformats.FragmentType.kTriggerPrimitive):
         map_name = ""
         if op_env=="np04hd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -83,13 +83,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
     elif(frag_type==daqdataformats.FragmentType.kTriggerActivity):
         map_name = ""
         if op_env=="np04hd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -99,13 +99,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
     elif(frag_type==daqdataformats.FragmentType.kTriggerCandidate):
         map_name = ""
         if op_env=="np04hd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2HDChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxChannelMap"
         elif op_env=="icebergvd":
@@ -146,7 +146,7 @@ def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_d
     with h5py.File(h5_file.get_file_name(), 'r') as f:
         record_index = RecordDataBase(run=f.attrs["run_number"],trigger=rid[0],sequence=rid[1])
         op_env = f.attrs["operational_environment"]
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_to_sid = {executor.submit(process_source_id,
                                          h5_file,
