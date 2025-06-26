@@ -39,6 +39,7 @@ def main(input_filenames, output_filename, force, append, nrecords, ana_data_pre
         print(f'Processing file {filename}.')
         
         h5_file = hdf5libs.HDF5RawDataFile(filename)
+
         records = h5_file.get_all_record_ids()
 
         if nrecords == -1 or nrecords > (n_processed_records+len(records)):
