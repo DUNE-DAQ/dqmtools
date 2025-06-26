@@ -7,7 +7,9 @@ import click
 
 @click.command()
 @click.argument('input_filenames', nargs=-1, type=click.Path(exists=True))
-def main(input_filenames):
+@click.option('--key-to-print', '-k', help='Key to print in detail')
+
+def main(input_filenames,key_to_print):
     df_dict = {}
 
     for filename in input_filenames:
@@ -31,6 +33,9 @@ def main(input_filenames):
         print(f'\t\tTotal entries: {len(df)}')
         print(f'\t\tDataframe indices: {df.index.names}')
         print(f'\t\tDataframe columns: {df.columns.to_list()}')
+        if key == key_to_print:
+            n_print = 10 if len(df)>=10 else len(df)
+            print(df[:n_print])
 
 
 if __name__ == '__main__':
