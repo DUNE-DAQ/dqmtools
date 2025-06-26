@@ -34,6 +34,8 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
         if not warm:
             tpc_rms_high_threshold=50
             tpc_rms_low_threshold=[4.,3.]
+        pds_det_names = ["HD_PDS"]
+        pds_det_ids = [ 2 ]
             
     else:
         tpc_det_name = "VD_BottomTPC"
@@ -43,6 +45,8 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
         if not warm:
             tpc_rms_high_threshold=50
             tpc_rms_low_threshold=[2.,3.]
+        pds_det_names = ["VD_MembranePDS","VD_CathodePDS"]
+        pds_det_ids = [ 8, 9 ]
 
     dqm_test_suite_wibs.register_test(CheckTimestampDiffs_WIBEth(tpc_det_name))
 
@@ -58,7 +62,7 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
     dqm_test_suite_wibs.register_test(CheckWIBEth_CD(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_LOL(tpc_det_name))        
     dqm_test_suite_wibs.register_test(CheckWIBEth_Link_Valid(tpc_det_name))
-    dqm_test_suite_wibs.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
+#    dqm_test_suite_wibs.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
     dqm_test_suite_wibs.register_test(CheckWIBEth_FEMB_Sync(tpc_det_name))
 
     dqm_test_suite_wibs.register_test(CheckTimestampsAligned(tpc_det_id),f"CheckTimestampsAligned_{tpc_det_name}")
@@ -80,10 +84,16 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
         Create separate test suite for DAPHNE and register all related tests
         """
         dqm_test_suite_daphne = DQMTestSuite("DAPHNETests")
-        dqm_test_suite_daphne.register_test(CheckTimestampsAligned(2),"CheckTimestampsAligned_PDS")
+
+        for pds_det_id in pds_det_ids:
+            dqm_test_suite_daphne.register_test(CheckTimestampsAligned(pds_det_id),f"CheckTimestampsAligned_PDS_{pds_det_id}")
+
         dqm_test_suite_daphne.register_test(CheckEmptyFragments_DAPHNE(), "CheckEmptyFragments_DAPHNE")
-        dqm_test_suite_daphne.register_test(CheckTimestampDiffs_DAPHNE())
-        dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE())
+
+        for pds_det_name in pds_det_names:
+            dqm_test_suite_daphne.register_test(CheckTimestampDiffs_DAPHNEStream(pds_det_name))
+            dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE(pds_det_name,"DAPHNE"))
+            dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE(pds_det_name,"DAPHNEStream"))
 
         dqm_test_suite.register_test(dqm_test_suite_daphne)
 

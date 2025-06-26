@@ -14,9 +14,10 @@ import click
 @click.option('--nrecords', '-n', default=1, help='How many Trigger Records to process (default: 1)')
 @click.option('--nworkers', default=10, help='How many thread workers to launch (default: 10)')
 @click.option('--wvfm_data_prescale', default=None, help='Prescale to apply to waveform data storage (default: None)')
+@click.option('--ana_data_prescale', default=1, help='Prescale to apply to analysis data storage (default: 1)')
 @click.option('--complevel', default=0, help='Compression level to use (0-9, default: 0)')
 @click.option('--complib', default=None, help='Compression library to use (zlib, lzo, bzip2, blosc, default: None)')
-def main(input_filenames, output_filename, force, append, nrecords, wvfm_data_prescale, nworkers, complevel, complib):
+def main(input_filenames, output_filename, force, append, nrecords, ana_data_prescale, wvfm_data_prescale, nworkers, complevel, complib):
 
     if force and append:
         print('Cannot use both --force (-f) and --append (-a) options. Use only one.')
@@ -48,7 +49,8 @@ def main(input_filenames, output_filename, force, append, nrecords, wvfm_data_pr
 
         for rid in records_to_process:
             print(f'Processing record {rid}')
-            df_dict = dfc.process_record(h5_file, rid, df_dict, MAX_WORKERS=nworkers, wvfm_data_prescale=wvfm_data_prescale)
+            df_dict = dfc.process_record(h5_file, rid, df_dict, MAX_WORKERS=nworkers,
+                                         ana_data_prescale=ana_data_prescale, wvfm_data_prescale=wvfm_data_prescale)
             n_processed_records += 1
 
         if n_processed_records == nrecords:

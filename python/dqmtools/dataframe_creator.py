@@ -33,7 +33,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     if(frag_type==daqdataformats.FragmentType.kWIBEth and det_id==detdataformats.DetID.Subdetector.kHD_TPC.value):
 
-        map_name = ""
+        map_name = None
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
@@ -46,7 +46,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
     
     elif(frag_type==daqdataformats.FragmentType.kWIBEth and det_id==detdataformats.DetID.Subdetector.kVD_BottomTPC.value):
 
-        map_name = ""
+        map_name = None
         if op_env=="np02vd":
             map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
@@ -56,6 +56,15 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         return rawdatautils.unpack.utils.WIBEthUnpacker(map_name,
                                                         ana_data_prescale=ana_data_prescale,
                                                         wvfm_data_prescale=wvfm_data_prescale)
+
+    elif(frag_type==daqdataformats.FragmentType.kTDEEth and det_id==detdataformats.DetID.Subdetector.kVD_TopTPC.value):
+        map_name = None
+#        if op_env=="np02vd":
+#            map_name="PD2VDBottomTPCChannelMap"
+        return rawdatautils.unpack.utils.TDEEthUnpacker(map_name,
+                                                        ana_data_prescale=ana_data_prescale,
+                                                        wvfm_data_prescale=wvfm_data_prescale)
+
     
     elif(frag_type==daqdataformats.FragmentType.kDAPHNEStream):
         return rawdatautils.unpack.utils.DAPHNEStreamUnpacker(ana_data_prescale=ana_data_prescale,
@@ -65,7 +74,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
                                                         wvfm_data_prescale=wvfm_data_prescale)
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerPrimitive):
-        map_name = ""
+        map_name = None
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
@@ -81,7 +90,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         return rawdatautils.unpack.utils.TriggerPrimitiveUnpacker(map_name)
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerActivity):
-        map_name = ""
+        map_name = None
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
@@ -97,7 +106,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         return rawdatautils.unpack.utils.TriggerActivityUnpacker(map_name)
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerCandidate):
-        map_name = ""
+        map_name = None
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
