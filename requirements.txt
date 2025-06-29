@@ -5,3 +5,4 @@ tabulate
 plotly
 tqdm
 kaleido
+pypdf

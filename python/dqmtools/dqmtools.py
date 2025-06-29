@@ -27,9 +27,10 @@ class DQMResultEnum(Enum):
 
 class DQMTestResult:
 
-    def __init__(self,result=DQMResultEnum.INVALID,message=""):
+    def __init__(self,result=DQMResultEnum.INVALID,message="",data=None):
         self.result = DQMResultEnum(result)
         self.message = str(message)
+        self.data = data
 
     def __bool__(self):
         return self.result!=DQMResultEnum.INVALID and self.result!=DQMResultEnum.BAD
@@ -65,7 +66,7 @@ class DQMTest:
         except Exception as err:
             res = DQMTestResult(DQMResultEnum.BAD,f'Check raised exception: {err}')
 
-        return { "result": res.result, "message": res.message, "last_update": datetime.now()}
+        return { "result": res.result, "message": res.message, "last_update": datetime.now()}, res.data
 
 
 class DQMTestSuite(DQMTest):
@@ -74,6 +75,7 @@ class DQMTestSuite(DQMTest):
         super().__init__(name=name)
         self.df_results = pd.DataFrame(columns=["name","result","message","last_update"])
         self.tests = {}
+        self.test_outputs = {}
 
     def register_test(self,test,name=None):
         if name is None:
@@ -91,12 +93,21 @@ class DQMTestSuite(DQMTest):
         
     def get_all_results(self):
         return self.df_results
-        
+
+    def get_test_outputs(self):
+        return self.test_outputs
+
     def get_latest_results(self):
         return self.df_results.sort_values('last_update',ascending=False).drop_duplicates(["name"])
 
     def run_test(self,*args,**kwargs):
-        new_df = pd.DataFrame([ test.do_test(*args,**kwargs) | {"name": name} for name, test in self.tests.items() ])
+        new_df = []
+        for name, test in self.tests.items():
+            res, output = test.do_test(*args,**kwargs)
+            new_df.append(res | {"name": name})
+            self.test_outputs[name] = output
+        # new_df = pd.DataFrame([ test.do_test(*args,**kwargs) | {"name": name} for name, test in self.tests.items() ])
+        new_df = pd.DataFrame(new_df)
 
         if(len(self.df_results)==0):
             self.df_results = new_df
