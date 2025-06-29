@@ -84,7 +84,7 @@ def plot_WIBEth_by_channel(df_dict,var,det_name,run=None,trigger=None,seq=None,y
 
     fig = px.scatter(df_tmp,x="channel",y=var,color="element_plane_label",width=1000,height=600)
     fig.update_layout(xaxis_title='Channel',yaxis_title=var,legend_title='APA/CRP, Plane',
-                          title=f'Run {index.run}, Record ({index.trigger,index.sequence}), Time {trigger_time}')
+                          title=f'Run {index.run}, Record ({int(index.trigger),int(index.sequence)}), Time {trigger_time}')
     if yrange is not None:
        fig.update_yaxes(range=yrange)
     if jpeg_base is not None:
@@ -146,9 +146,12 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,element,plane,
     if tpc_wvfm_key not in df_dict.keys():
         print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
         return empty_plot()
-    
     df_tmp = df_dict[tpc_wvfm_key]
     df_tmp = df_tmp.loc[(df_tmp["element"]==element)&(df_tmp["plane"]==plane)]
+
+    if df_tmp.empty:
+        print(f"Can not make plots for element {element} and plane {plane}, no DATA found")
+        return empty_plot()
 
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
     if offset:
@@ -205,7 +208,7 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,element,plane,
                         "showscale":True,
                         "colorbar":{
                             # "title":"Counts",
-                            "titleside": "right"
+                            # "titleside": "right" #! not an option anymore
                         },
                         "opacity": 0
                         },

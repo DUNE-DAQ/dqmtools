@@ -215,7 +215,7 @@ class CheckRMS_WIBEth(DQMTest):
 
     def __init__(self,det_name,threshold=100,operator=operator.gt,verbose=False):
         super().__init__()
-        self.name = 'CheckRMS_{det_name}'
+        self.name = f'CheckRMS_{det_name}'
         self.det_data_key=f'detd_k{det_name}_kWIBEth'
 
         if not isinstance(threshold,list): #one value for all planes
@@ -241,7 +241,9 @@ class CheckRMS_WIBEth(DQMTest):
         df_tmp = df_dict[self.det_data_key].reset_index().merge(self.df_threshold,on=["plane"])
         df_tmp = df_tmp[["channel","adc_rms","threshold"]].groupby(by="channel").mean().reset_index()
         df_tmp = df_tmp.loc[self.operator(df_tmp["adc_rms"],df_tmp["threshold"])]
-        n_rms_bad = len(np.unique(df_tmp["channel"]))
+
+        rms_bad = np.unique(df_tmp["channel"])
+        n_rms_bad = len(rms_bad)
 
         if n_rms_bad==0:
             return DQMTestResult(DQMResultEnum.OK,f'OK')
@@ -255,7 +257,7 @@ class CheckRMS_WIBEth(DQMTest):
                                headers=["Channel","RMS","APA/CRP","Plane","Threshold"],
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
-                                 f'{n_rms_bad} channels have RMS outside of range.')
+                                 f'{n_rms_bad} channels have RMS outside of range.', df_tmp)
 
 class CheckPedestal_WIBEth(DQMTest):
 
@@ -312,3 +314,12 @@ class CheckPedestal_WIBEth(DQMTest):
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_bad} channels have pedestal outside of range.')
 
+class FindHitThreshold_WIBEth(DQMTest):
+    def __init__(self, name=None):
+        super().__init__(name)
+        self.name = f'CheckPedestal_{det_name}'
+        self.det_data_key=f'detd_k{det_name}_kWIBEth'
+
+
+    def run_test(self, df_dict):
+        return
