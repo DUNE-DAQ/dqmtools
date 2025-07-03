@@ -72,19 +72,17 @@ def empty_plot(text="NO DATA"):
 
 def plot_WIBEth_by_channel(df_dict,var,det_name,run=None,trigger=None,seq=None,yrange=None,jpeg_base=None):
 
-    rename_PD2HD_APAs(df_dict)
-
     if f"detd_k{det_name}_kWIBEth" not in df_dict.keys():
         print(f"Can not make plots for detd_k{det_name}_kWIBEth, no DATA found")
         return
     
     df_tmp, index = dfc.select_record(df_dict[f"detd_k{det_name}_kWIBEth"],run,trigger,seq)
     df_tmp = df_tmp.reset_index()
-    df_tmp["apa_plane_label"] = df_tmp[["apa","plane"]].apply(lambda x: f'{x.apa}, Plane {x.plane}',axis=1)
+    df_tmp["ele_plane_label"] = df_tmp[["element","plane"]].apply(lambda x: f'APA/CRP {x.element}, Plane {x.plane}',axis=1)
     
     trigger_time = get_CERN_timestamp(df_dict,index)
 
-    fig = px.scatter(df_tmp,x="channel",y=var,color="apa_plane_label",width=1000,height=600)
+    fig = px.scatter(df_tmp,x="channel",y=var,color="ele_plane_label",width=1000,height=600)
     fig.update_layout(xaxis_title='Channel',yaxis_title=var,legend_title='APA/CRP, Plane',
                           title=f'Run {index.run}, Record ({index.trigger,index.sequence}), Time {trigger_time}')
     if yrange is not None:
@@ -95,8 +93,6 @@ def plot_WIBEth_by_channel(df_dict,var,det_name,run=None,trigger=None,seq=None,y
 
 def plot_WIBETH_by_channel_DQM(df_dict,var,tpc_det_key,run=None,trigger=None,seq=None):
 
-    rename_PD2HD_APAs(df_dict)
-
     if tpc_det_key not in df_dict.keys():
         print(f"Can not make plots for {tpc_det_key}, no DATA found")
         return None
@@ -104,17 +100,15 @@ def plot_WIBETH_by_channel_DQM(df_dict,var,tpc_det_key,run=None,trigger=None,seq
     df_tmp, index = dfc.select_record(df_dict[tpc_det_key],run,trigger,seq)
 
     df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp[["channel",var,"plane","apa"]]
+    df_tmp = df_tmp[["channel",var,"plane","element"]]
 
-    fig_mean = px.scatter(df_tmp,x="channel",y=var,color="apa",facet_col="plane")
+    fig_mean = px.scatter(df_tmp,x="channel",y=var,color="element",facet_col="plane")
     fig_mean.for_each_annotation(lambda a: a.update(text=f"Plane {a.text.split('=')[-1]}"))
 
     return fig_mean
 
 
 def plot_WIBEth_pulser_by_channel(df_dict,det_name,run=None,trigger=None,seq=None,jpeg_base=None):
-
-    rename_PD2HD_APAs(df_dict)
 
     if f"detd_k{det_name}_kWIBEth" not in df_dict.keys():
         print(f"Can not make plots for detd_k{det_name}_kWIBEth, no DATA found")
@@ -135,13 +129,11 @@ def plot_WIBEth_pulser_by_channel(df_dict,det_name,run=None,trigger=None,seq=Non
         fig.write_image(f"{jpeg_base}_run{index.run}_trigger{index.trigger}_seq{index.sequence}.jpeg")
     return fig
 
-def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
+def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
                         offset=True,offset_type="median",
                         make_static=False,make_tp_overlay=False,
                         orientation="vertical",colorscale='plasma',color_range=(-256,256),
                         run=None,trigger=None,seq=None):
-
-    rename_PD2HD_APAs(df_dict)
 
     offset_var = f'adc_{offset_type}'
     
@@ -156,7 +148,7 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
         return empty_plot()
     
     df_tmp = df_dict[tpc_wvfm_key]
-    df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
+    df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
 
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
     if offset:
@@ -212,8 +204,10 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
                         "colorscale":colorscale,
                         "showscale":True,
                         "colorbar":{
-                            # "title":"Counts",
-                            "titleside": "right"
+                            "title":{
+                                #"text": "Counts",
+                                "side": "right"
+                            }
                         },
                         "opacity": 0
                         },
@@ -258,13 +252,13 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,apa,plane,
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
     #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_apas = len(np.unique(df_tmp["apa"]))
+    n_elements = len(np.unique(df_tmp["element"]))
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas*3)]
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
     df_tmp = df_tmp.set_index(idx_names)
 
-    df_tmp = df_tmp.loc[(df_tmp["apa"]==apa)&(df_tmp["plane"]==plane)]
+    df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
     if len(df_tmp)==0:
@@ -310,8 +304,6 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
                          offset=False,offset_type='median',
                          overlay_tps=False,
                          run=None,trigger=None,seq=None):
-
-    rename_PD2HD_APAs(df_dict)
 
     offset_var = f'adc_{offset_type}'
     
@@ -366,10 +358,10 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
     #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_apas = len(np.unique(df_tmp["apa"]))
+    n_elements = len(np.unique(df_tmp["element"]))
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_apas*3)]
+    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
     df_tmp = df_tmp.set_index(idx_names)
 
     idx_names = df_tmp.index.names
