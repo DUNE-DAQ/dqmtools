@@ -132,9 +132,16 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
 
     if(make_plots):
         if(not wibpulser):
-            plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,jpeg_base=f"pdune2_{tpc_det_name}_rms")
-            plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60],jpeg_base=f"pdune2_{tpc_det_name}_rms_fixrange")
-            plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name,jpeg_base=f"pdune2_{tpc_det_name}_mean")
+            plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    jpeg_base=f"pdune2_{tpc_det_name}_rms")
+            plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    yrange=[-1,60],
+                                    jpeg_base=f"pdune2_{tpc_det_name}_rms_fixrange")
+            plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    jpeg_base=f"pdune2_{tpc_det_name}_mean")
         if(wibpulser):
             plot_WIBEth_pulser_by_channel(df_dict,det_name=tpc_det_name,jpeg_base=f'pdune2_{tpc_det_name}_pulser')
 

@@ -29,3 +29,14 @@ def rename_PD2HD_APAs(df_dict):
     for key, val in df_dict.items():
         if "apa" in val.columns:
             val["apa"] = val["apa"].apply(_rename_PD2HD_APAs)
+
+#check and filter out to only valid keys
+def get_valid_keys(df_dict,det_keys):
+    valid_det_keys = []
+    for det_key in det_keys:
+        if det_key not in df_dict.keys():
+            print(f"Can not make plots for {det_key}, no DATA found")
+        else:
+            valid_det_keys.append(det_key)
+
+    return valid_det_keys
