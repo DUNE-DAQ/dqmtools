@@ -211,6 +211,30 @@ class CheckRequestTimes_WIBEth(DQMTest):
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_bad} / {len(df_tmp)} WIBEth fragments have misaligned request windows.')
 
+class InitialHitThreshold_WIBEth(DQMTest):
+
+    def __init__(self,det_name,multiplier=3,verbose=False):
+        super().__init__()
+        self.name = f'CheckRMS_{det_name}'
+        self.det_data_key=f'detd_k{det_name}_kWIBEth'
+        self.multiplier = multiplier
+        self.verbose = verbose
+
+    def run_test(self,df_dict):
+
+        if self.det_data_key not in df_dict.keys():
+            return DQMTestResult(DQMResultEnum.WARNING,f'Could not find {self.det_data_key} in DataFrame dict.')
+        
+        df_tmp = df_dict[self.det_data_key].reset_index()
+        result_df = []
+        for e in pd.unique(df_tmp["element"]):
+            for p in pd.unique(df_tmp["plane"]):
+                mask = (df_tmp["element"] == e) & (df_tmp["plane"] == p)
+                rms = np.mean(df_tmp[mask]["adc_rms"])
+                result_df.append({"plane" : p, "elemnt" : e, f"basline hit threshold ({self.multiplier} x RMS)" : self.multiplier*rms})
+
+        return DQMTestResult(DQMResultEnum.OK,"", pd.DataFrame(result_df))
+
 class CheckRMS_WIBEth(DQMTest):
 
     def __init__(self,det_name,threshold=100,operator=operator.gt,verbose=False):
@@ -313,13 +337,3 @@ class CheckPedestal_WIBEth(DQMTest):
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_bad} channels have pedestal outside of range.')
-
-class FindHitThreshold_WIBEth(DQMTest):
-    def __init__(self, name=None):
-        super().__init__(name)
-        self.name = f'CheckPedestal_{det_name}'
-        self.det_data_key=f'detd_k{det_name}_kWIBEth'
-
-
-    def run_test(self, df_dict):
-        return
