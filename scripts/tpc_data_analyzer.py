@@ -144,11 +144,10 @@ def images_to_pdf(figs, name = "raw_adc_data_analysis.pdf"):
 @click.option('--nrecords', '-n', default=1, help='How many Trigger Records to process (default: 1)')
 @click.option('--nworkers', default=10, help='How many thread workers to launch (default: 10)')
 @click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
-@click.option('--warm/--cold', default=True, help='Whether we are running warm or cold (default: "warm")')
 @click.option('--vector',is_flag=True, help='Images in a pdf vector graphics rather than raster')
 @click.option('--rms-threshold', default=100, help = "Minimum rms value for a channel to be considered noisy (default:100)")
 @click.option('--mean-rms-factor', default=5, help = "factor to multiply the mean rms by when determining the hit threshold (default:5)")
-def main(filenames, nrecords, nworkers, hd, warm, vector):
+def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_factor):
 
     if vector:
         extension = "pdf"
@@ -165,16 +164,12 @@ def main(filenames, nrecords, nworkers, hd, warm, vector):
     else:
         tpc_det_name = "VD_BottomTPC"
 
-    tpc_rms_high_threshold=100
-    if not warm:
-        tpc_rms_high_threshold=50
 
-
-    dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
+    dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=rms_threshold,verbose=True),
                                         name=f"CheckRMS_{tpc_det_name}_High")
     dqm_test_suite_wibs.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
                                          name=f"CheckPedestal_{tpc_det_name}")
-    dqm_test_suite_wibs.register_test(InitialHitThreshold_WIBEth(det_name=tpc_det_name, multiplier=5,verbose=True),
+    dqm_test_suite_wibs.register_test(InitialHitThreshold_WIBEth(det_name=tpc_det_name, multiplier=mean_rms_factor,verbose=True),
                                         name=f"InitialHitThreshold_{tpc_det_name}_High")
 
 
@@ -231,7 +226,7 @@ def main(filenames, nrecords, nworkers, hd, warm, vector):
     figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
 
     print("Plotting table of high noise channels")
-    for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)):
+    for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, rms_threshold, tpc_det_name)):
         figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
 
     print("Saving figures")

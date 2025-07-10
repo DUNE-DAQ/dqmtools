@@ -61,10 +61,10 @@ Also, when developing in the repos, even if just python ensure you run `dbt-buil
 To run a check on the raw ADC data to get noisy channels and event displays (and initial TPG thresholds eventually), run
 
 ```
-raw_adc_analysis.py <path-to-trigger-record> --vd --make-plots
+tpc_data_analyzer.py <path-to-trigger-record> --vd
 ```
 
-and a pdf document called `raw_adc_analysis.pdf` should be generated. The document will contain:
+and a pdf document called `run<run-numer>_raw_adc_data_analysis.pdf` should be generated. The document will contain:
 
 - plots of channel rms for each detector element
 - table of channels to mask (ones that exceed an rms of 100) **can make configurable**
