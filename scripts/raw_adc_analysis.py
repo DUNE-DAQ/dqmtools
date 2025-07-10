@@ -19,6 +19,7 @@ import concurrent.futures
 import click
 
 import plotly.graph_objects as go
+from PIL import Image
 
 
 def make_hit_thresholds_table(df_dict,thresholds,det_name,run=None,trigger=None,seq=None,jpeg_base=None):
@@ -112,6 +113,31 @@ def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10):
             figs[res[0]] = res[1]
     return figs
 
+def clear_tmp_files(files):
+    for file in files:
+        if os.path.exists(file):
+            os.remove(file)
+        else:
+            print(f"{file} does not exist.")
+
+    return
+
+def pdf_to_pdf(figs,  name = "raw_adc_data_analysis.pdf"):
+    merger = PdfWriter()
+    for fig in figs:
+        merger.append(fig)
+    merger.write(name)
+    merger.close()
+    clear_tmp_files(figs)
+    return name
+
+def images_to_pdf(figs, name = "raw_adc_data_analysis.pdf"):
+    all_figs = [Image.open(pic) for pic in figs]
+    ready_pics = [pic.convert('RGB') for pic in all_figs]
+    ready_pics[0].save(name, save_all=True, append_images=ready_pics[1:])
+    clear_tmp_files(figs)
+    return name
+
 
 @click.command()
 @click.argument('filenames', nargs=-1, type=click.Path(exists=True))
@@ -119,35 +145,27 @@ def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10):
 @click.option('--nworkers', default=10, help='How many thread workers to launch (default: 10)')
 @click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
 @click.option('--warm/--cold', default=True, help='Whether we are running warm or cold (default: "warm")')
-@click.option('--make-plots',is_flag=True, help='Option to make plots')
-def main(filenames, nrecords, nworkers, hd, warm, make_plots):
+@click.option('--vector',is_flag=True, help='Images in a pdf vector graphics rather than raster')
+def main(filenames, nrecords, nworkers, hd, warm, vector):
+
+    if vector:
+        extension = "pdf"
+    else:
+        extension = "png"
 
     #setup our tests
     dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
     dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
     dqm_test_suite_wibs.register_test(CheckNFrames_WIBEth())
     
-    if(hd):
-        tpc_det_name = "HD_TPC"
-        tpc_det_id = 3
-        tpc_rms_high_threshold=100
-        tpc_rms_low_threshold=[15.]
-        if not warm:
-            tpc_rms_high_threshold=50
-            tpc_rms_low_threshold=[4.,3.]
-        pds_det_names = ["HD_PDS"]
-        pds_det_ids = [ 2 ]
-            
+    if hd:
+        tpc_det_name = "HD_TPC"            
     else:
         tpc_det_name = "VD_BottomTPC"
-        tpc_det_id = 10
-        tpc_rms_high_threshold=100
-        tpc_rms_low_threshold=[12.,20.]        
-        if not warm:
-            tpc_rms_high_threshold=50
-            tpc_rms_low_threshold=[2.,3.]
-        pds_det_names = ["VD_MembranePDS","VD_CathodePDS"]
-        pds_det_ids = [ 8, 9 ]
+
+    tpc_rms_high_threshold=100
+    if not warm:
+        tpc_rms_high_threshold=50
 
 
     dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
@@ -182,7 +200,7 @@ def main(filenames, nrecords, nworkers, hd, warm, make_plots):
 
     df_dict = dfc.concatenate_dataframes(df_dict)
 
-    res = dqm_test_suite.run_test(df_dict)
+    dqm_test_suite.run_test(df_dict)
 
     outputs = dqm_test_suite_wibs.get_test_outputs()
     high_channels = outputs[f"CheckRMS_{tpc_det_name}_High"]
@@ -196,43 +214,38 @@ def main(filenames, nrecords, nworkers, hd, warm, make_plots):
             print(f'Results for {test.get_name()}:')
             print(test.get_table(show_last_update=False))
 
-    if(make_plots):
-        figs = {}
-        print("Plotting RMS")
-        figs[f"pdune2_{tpc_det_name}_rms"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name)
-        figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60])
-        print("Plotting ADC mean")
-        figs[f"pdune2_{tpc_det_name}_mean"] = plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name)
+    figs = {}
+    print("Plotting RMS")
+    figs[f"pdune2_{tpc_det_name}_rms"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name)
+    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60])
+    print("Plotting ADC mean")
+    figs[f"pdune2_{tpc_det_name}_mean"] = plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name)
 
-        print("Plotting event display")
-        evd_figs = make_evd(df_dict, tpc_det_name)
-        figs = figs | evd_figs
+    print("Plotting event display")
+    evd_figs = make_evd(df_dict, tpc_det_name)
+    figs = figs | evd_figs
 
-        print("Plotting table of Initial hit thresholds to set for the TPG")
-        figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
+    print("Plotting table of Initial hit thresholds to set for the TPG")
+    figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
 
-        print("Plotting table of high noise channels")
-        for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)):
-            figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
+    print("Plotting table of high noise channels")
+    for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)):
+        figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
 
-        print("Saving figures")
-        for k, v in figs.items():
-            pio.write_image(v, k+".pdf", format="pdf")
-        
-        merger = PdfWriter()
+    print("Saving figures")
+    files = []
+    for k, v in figs.items():
+        print(f"Saving {k}")
+        filename = f"{k}.{extension}"
+        pio.write_image(v, filename, format=extension, scale=4)
+        files.append(filename)
 
-        for pdf in figs:
-            merger.append(pdf+".pdf")
-
-        merger.write("raw_adc_analysis.pdf")
-        merger.close()
-
-        for pdf in figs:
-            name = pdf+".pdf"
-            if os.path.exists(name):
-                os.remove(name)
-            else:
-                print(f"{name} does not exist.")
+    pdf_name = f'run{df_dict["trh"].index[0][0]}raw_adc_data_analysis.pdf'
+    if vector:
+        name = pdf_to_pdf(files, pdf_name)
+    else:
+        name = images_to_pdf(files, pdf_name)
+    print(f"Report saved to {name}")
 
 if __name__ == '__main__':
     main()
