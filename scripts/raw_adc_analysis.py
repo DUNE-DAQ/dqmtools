@@ -199,7 +199,7 @@ def main(filenames, nrecords, nworkers, hd, warm, make_plots):
         print("Plotting table of high noise channels")
         figs[f"pdune2_{tpc_det_name}_high_channels"] = make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)
         print("Plotting table of Initial hit thresholds to set for the TPG")
-        figs[f"pdune2_{tpc_det_name}_high_channels"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
+        figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
 
         print("Plotting event display")
         evd_figs = make_evd(df_dict, tpc_det_name)
