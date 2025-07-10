@@ -34,17 +34,24 @@ def make_hit_thresholds_table(df_dict,thresholds,det_name,run=None,trigger=None,
     return fig
 
 def make_bad_channels_table(df_dict, high_channels,threshold,det_name,run=None,trigger=None,seq=None,jpeg_base=None):
-    fig = go.Figure(data=[go.Table(
-        header=dict(values=list(high_channels.columns)),
-        cells=dict(values=np.round(high_channels.transpose().values, 2).tolist())
-    )])
 
-    _, index = dfc.select_record(df_dict[f"detd_k{det_name}_kWIBEth"],run,trigger,seq)
-    trigger_time = get_CERN_timestamp(df_dict,index)
+    n=10
+    list_df = [high_channels[i:i+n] for i in range(0,len(high_channels),n)]
+
+    figs = []
+    for df in list_df:
+        fig = go.Figure(data=[go.Table(
+            header=dict(values=list(df.columns)),
+            cells=dict(values=np.round(df.transpose().values, 2).tolist())
+        )])
+
+        _, index = dfc.select_record(df_dict[f"detd_k{det_name}_kWIBEth"],run,trigger,seq)
+        trigger_time = get_CERN_timestamp(df_dict,index)
 
 
-    fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, Time {trigger_time} (CERN)<br><sup> channels with rms exceeding {threshold} </sup>", font=dict(size=20)))
-    return fig
+        fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, Time {trigger_time} (CERN)<br><sup> channels with rms exceeding {threshold} </sup>", font=dict(size=20)))
+        figs.append(fig)
+    return figs
 
 def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10):
     print(tpc_det_name)
@@ -147,7 +154,7 @@ def main(filenames, nrecords, nworkers, hd, warm, make_plots):
                                         name=f"CheckRMS_{tpc_det_name}_High")
     dqm_test_suite_wibs.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
                                          name=f"CheckPedestal_{tpc_det_name}")
-    dqm_test_suite_wibs.register_test(InitialHitThreshold_WIBEth(det_name=tpc_det_name,verbose=True),
+    dqm_test_suite_wibs.register_test(InitialHitThreshold_WIBEth(det_name=tpc_det_name, multiplier=5,verbose=True),
                                         name=f"InitialHitThreshold_{tpc_det_name}_High")
 
 
@@ -196,14 +203,17 @@ def main(filenames, nrecords, nworkers, hd, warm, make_plots):
         figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60])
         print("Plotting ADC mean")
         figs[f"pdune2_{tpc_det_name}_mean"] = plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name)
-        print("Plotting table of high noise channels")
-        figs[f"pdune2_{tpc_det_name}_high_channels"] = make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)
-        print("Plotting table of Initial hit thresholds to set for the TPG")
-        figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
 
         print("Plotting event display")
         evd_figs = make_evd(df_dict, tpc_det_name)
         figs = figs | evd_figs
+
+        print("Plotting table of Initial hit thresholds to set for the TPG")
+        figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)
+
+        print("Plotting table of high noise channels")
+        for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, tpc_rms_high_threshold, tpc_det_name)):
+            figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
 
         print("Saving figures")
         for k, v in figs.items():
