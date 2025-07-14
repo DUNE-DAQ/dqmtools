@@ -29,6 +29,13 @@ from .plot_utils import *
 
 from .common_plots import *
 
+def get_sampling_factor(det_id):
+    if det_id==3 or det_id==10:
+        return 32
+    if det_id==11:
+        return 31.25
+    else:
+        return 1
 
 def plot_TPCData_by_channel(df_dict,var,det_keys,
                             run=None,trigger=None,seq=None,
@@ -227,14 +234,7 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
     #if we are, let's grab the TPs
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
-    #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_elements = len(np.unique(df_tmp["element"]))
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
-    df_tmp = df_tmp.set_index(idx_names)
-
-    df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
+    df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
     if len(df_tmp)==0:
@@ -243,10 +243,11 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
 
-    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
 
-    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.time_over_threshold}<br>tot: {x.time_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
+    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_end_trg_sub}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
 
     if orientation=="horizontal":
         xdata = df_tmp["time_peak_trg_sub"]
@@ -272,5 +273,91 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
     )
 
     fig.add_trace(tp_fig)
+
+    return fig
+
+def plot_TPC_waveform(df_dict,det_keys,channel,
+                      offset=False,offset_type='median',
+                      overlay_tps=False,
+                      run=None,trigger=None,seq=None):
+
+    offset_var = f'adc_{offset_type}'
+
+    #check and filter out to only valid keys
+    det_keys[:] = get_valid_keys(df_dict,det_keys)
+
+    if not det_keys:
+        print("No valid data keys found.")
+        return empty_plot()
+
+    #get all our data
+    df_all = []
+    index = None
+    for det_key in det_keys:
+
+        df_tmp = df_dict[det_key]
+        idx_names = df_tmp.index.names
+        df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
+        df_tmp = df_tmp.set_index(idx_names)
+
+        if len(df_tmp)==0: continue
+
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+        if offset:
+            df_tmp = df_tmp.merge(df_dict["detd"+det_key[4:]][offset_var],left_index=True,right_index=True)
+
+        df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+        df_tmp = df_tmp.reset_index()
+        df_all.append(df_tmp)
+
+    df_all = pd.concat(df_all,ignore_index=True)
+
+    df_all["timestamps_trg_sub"] = df_all.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
+    yaxis_title = "ADC counts"
+    if offset:
+        df_all["adcs"] = df_all["adcs"]-df_all[offset_var]
+        yaxis_title = yaxis_title + " (pedestal subtracted)"
+
+    #print(df_tmp)
+    #print(df_tmp["timestamps"].values[0])
+    #print(df_tmp["adcs"].values[0])
+    fig = go.Figure(data=go.Scatter(x=df_all["timestamps_trg_sub"].values[0], y=df_all["adcs"].values[0]))
+
+
+    fig.update_layout(xaxis_title='DTS Timestamp (16ns) relative to trigger',
+                      yaxis_title=yaxis_title,
+                      title=f"Waveform for channel {channel}")
+
+    #if we're not overlaying TPs, just leave
+    if not overlay_tps:
+        return fig
+
+    #if we are, let's grab the TPs
+
+    if "trgd_kDAQ_kTriggerPrimitive" not in df_dict:
+        return fig
+
+    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
+
+    idx_names = df_tmp.index.names
+    df_tmp = df_tmp.reset_index()
+    df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
+    df_tmp = df_tmp.set_index(idx_names)
+
+    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+    if len(df_tmp)==0:
+        return fig
+
+    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+    df_tmp = df_tmp.reset_index()
+    df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
+
+    for index, tp in df_tmp.iterrows():
+        fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)
+        fig.add_vline(x=tp["time_peak_trg_sub"], line_width=1, line_dash="dash", line_color="red")
 
     return fig
