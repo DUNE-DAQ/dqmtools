@@ -22,18 +22,20 @@ import click
 def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
 
     #setup our tests
-    dqm_test_suite = DQMTestSuite()
-    dqm_test_suite.register_test(CheckAllExpectedFragmentsTest())
-    dqm_test_suite.register_test(CheckNFrames_WIBEth())
+    dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
+    dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
+    dqm_test_suite_wibs.register_test(CheckNFrames_WIBEth())
     
     if(hd):
         tpc_det_name = "HD_TPC"
         tpc_det_id = 3
         tpc_rms_high_threshold=100
-        tpc_rms_low_threshold=[20.,15.]
+        tpc_rms_low_threshold=[15.]
         if not warm:
             tpc_rms_high_threshold=50
             tpc_rms_low_threshold=[4.,3.]
+        pds_det_names = ["HD_PDS"]
+        pds_det_ids = [ 2 ]
             
     else:
         tpc_det_name = "VD_BottomTPC"
@@ -43,44 +45,60 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
         if not warm:
             tpc_rms_high_threshold=50
             tpc_rms_low_threshold=[2.,3.]
+        pds_det_names = ["VD_MembranePDS","VD_CathodePDS"]
+        pds_det_ids = [ 8, 9 ]
 
-    dqm_test_suite.register_test(CheckTimestampDiffs_WIBEth(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckTimestampDiffs_WIBEth(tpc_det_name))
 
-    dqm_test_suite.register_test(CheckWIBEth_COLDDATA_Timestamp_0_Diff(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_COLDDATA_Timestamp_1_Diff(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_COLDDATA_Timestamps_Aligned(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_COLDDATA_Timestamp_0_Diff(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_COLDDATA_Timestamp_1_Diff(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_COLDDATA_Timestamps_Aligned(tpc_det_name))
 
-    dqm_test_suite.register_test(CheckWIBEth_CRC_Err(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_Pulser(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_Calibration(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_Ready(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_Context(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_CD(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_LOL(tpc_det_name))        
-    dqm_test_suite.register_test(CheckWIBEth_Link_Valid(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
-    dqm_test_suite.register_test(CheckWIBEth_FEMB_Sync(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_CRC_Err(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_Pulser(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_Calibration(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_Ready(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_Context(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_CD(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_LOL(tpc_det_name))        
+    dqm_test_suite_wibs.register_test(CheckWIBEth_Link_Valid(tpc_det_name))
+#    dqm_test_suite_wibs.register_test(CheckWIBEth_WIB_Sync(tpc_det_name))
+    dqm_test_suite_wibs.register_test(CheckWIBEth_FEMB_Sync(tpc_det_name))
 
-    dqm_test_suite.register_test(CheckTimestampsAligned(tpc_det_id),f"CheckTimestampsAligned_{tpc_det_name}")
+    dqm_test_suite_wibs.register_test(CheckTimestampsAligned(tpc_det_id),f"CheckTimestampsAligned_{tpc_det_name}")
+    dqm_test_suite_wibs.register_test(CheckRequestTimes_WIBEth(tpc_det_name))
 
     if(not wibpulser):
-        dqm_test_suite.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
                                          name=f"CheckRMS_{tpc_det_name}_High")
-        dqm_test_suite.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_low_threshold,operator=operator.lt,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_low_threshold,operator=operator.lt,verbose=True),
                                          name=f"CheckRMS_{tpc_det_name}_Low")
-        dqm_test_suite.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
                                          name=f"CheckPedestal_{tpc_det_name}")
 
+    dqm_test_suite = DQMTestSuite("All Tests")
+    dqm_test_suite.register_test(dqm_test_suite_wibs)
+        
     if pds:
         """
         Create separate test suite for DAPHNE and register all related tests
         """
-        dqm_test_suite_daphne = DQMTestSuite()
-        dqm_test_suite_daphne.register_test(CheckTimestampsAligned(2),"CheckTimestampsAligned_PDS")
-        dqm_test_suite_daphne.register_test(CheckEmptyFragments_DAPHNE(), "CheckEmptyFragments_DAPHNE")
-        dqm_test_suite_daphne.register_test(CheckTimestampDiffs_DAPHNE())
-        dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE())
+        dqm_test_suite_daphne = DQMTestSuite("DAPHNETests")
 
+        for pds_det_id in pds_det_ids:
+            dqm_test_suite_daphne.register_test(CheckTimestampsAligned(pds_det_id),f"CheckTimestampsAligned_PDS_{pds_det_id}")
+
+        dqm_test_suite_daphne.register_test(CheckEmptyFragments_DAPHNE(), "CheckEmptyFragments_DAPHNE")
+
+        for pds_det_name in pds_det_names:
+            dqm_test_suite_daphne.register_test(CheckTimestampDiffs_DAPHNEStream(pds_det_name))
+            dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE(pds_det_name,"DAPHNE"))
+            dqm_test_suite_daphne.register_test(CheckADCData_DAPHNE(pds_det_name,"DAPHNEStream"))
+
+        dqm_test_suite.register_test(dqm_test_suite_daphne)
+
+
+        
     df_dict = {}
     n_processed_records = 0
     for filename in filenames:
@@ -102,21 +120,28 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
 
     df_dict = dfc.concatenate_dataframes(df_dict)
 
-    print(df_dict.keys())
+    #print(df_dict.keys())
 
-    dqm_test_suite.do_all_tests(df_dict)
-    print(dqm_test_suite.get_table())
+    res = dqm_test_suite.run_test(df_dict)
+    print(dqm_test_suite.get_table(show_last_update=False))
 
-    if pds:
-        print("\n\nDAPHNE test results:")
-        dqm_test_suite_daphne.do_all_tests(df_dict)
-        print(dqm_test_suite_daphne.get_table())
+    for test in dqm_test_suite.get_all_tests():
+        if test.is_test_suite():
+            print(f'Results for {test.get_name()}:')
+            print(test.get_table(show_last_update=False))
 
     if(make_plots):
         if(not wibpulser):
-            plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,jpeg_base=f"pdune2_{tpc_det_name}_rms")
-            plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60],jpeg_base=f"pdune2_{tpc_det_name}_rms_fixrange")
-            plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name,jpeg_base=f"pdune2_{tpc_det_name}_mean")
+            plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    jpeg_base=f"pdune2_{tpc_det_name}_rms")
+            plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    yrange=[-1,60],
+                                    jpeg_base=f"pdune2_{tpc_det_name}_rms_fixrange")
+            plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],
+                                    width=1000,height=600,
+                                    jpeg_base=f"pdune2_{tpc_det_name}_mean")
         if(wibpulser):
             plot_WIBEth_pulser_by_channel(df_dict,det_name=tpc_det_name,jpeg_base=f'pdune2_{tpc_det_name}_pulser')
 

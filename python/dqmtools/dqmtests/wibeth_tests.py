@@ -1,21 +1,8 @@
 from dqmtools.dqmtools import *
+from rawdatautils.unpack.dataclasses import *
 
 import numpy as np
 import operator
-
-class CheckAllExpectedFragmentsTest(DQMTest):
-
-    def __init__(self):
-        super().__init__()
-        self.name = 'CheckAllExpectedFragmentsTest'
-
-    def run_test(self,df_dict):
-        df_tmp = (df_dict["trh"]["n_fragments"]!=df_dict["trh"]["n_requested_components"])
-        n_not_matched = df_tmp.sum()
-        if n_not_matched==0:
-            return DQMTestResult(DQMResultEnum.OK,f'OK')
-        else:
-            return DQMTestResult(DQMResultEnum.BAD,f'{n_not_matched} / {len(df_tmp)} records missing fragments.')
 
 class CheckTimestampDiffs_WIBEth(DQMTest):
     
@@ -168,49 +155,6 @@ class CheckWIBEth_FEMB_Sync(CheckWIBEth_Header_Value):
         super().__init__(det_name,"femb_sync",3)
         self.name = f'CheckWIBEth_FEMB_Sync_{det_name}'
 
-        
-class CheckTimestampsAligned(DQMTest):
-
-    def __init__(self,det_id,verbose=True):
-        super().__init__()
-        self.det_id = det_id
-        self.name = f'CheckTimestampsAligned_{det_id}'
-        self.verbose = verbose
-        
-    def any_different(arr):
-        return (arr.values!=arr.values[0]).sum()
-
-    def unique(arr):
-        return np.unique(arr.values,return_counts=True)
-    
-    def run_test(self,df_dict):
-        df_tmp = df_dict["daqh"].loc[df_dict["daqh"]["det_id"]==self.det_id]
-
-        if len(df_tmp)==0:
-            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No components found with detector id {self.det_id}.')
-        
-        df_tmp_gb = df_tmp.groupby(by=["run","trigger","sequence"])["timestamp_first_dts"].agg(CheckTimestampsAligned.unique)
-        df_tmp_gb_n = df_tmp_gb.apply(lambda x: len(x[1]))
-        n_different = (df_tmp_gb_n!=1).sum()
-
-        if n_different==0:
-            return DQMTestResult(DQMResultEnum.OK,f'OK')
-        else:
-            if self.verbose:
-                df_tmp_gb_mode = df_tmp_gb.apply(lambda x: x[0][np.argmax(x[1])])
-                df_tmp = df_tmp.join(df_tmp_gb_mode,rsuffix='_majority')
-                df_tmp = df_tmp.loc[(df_tmp["timestamp_first_dts"]!=df_tmp["timestamp_first_dts_majority"])]
-
-                df_tmp["timestamp_diff"] = df_tmp["timestamp_first_dts"]-df_tmp["timestamp_first_dts_majority"]
-                n_different = len(np.unique(df_tmp.reset_index()["src_id"].apply(lambda x: int(x))))
-                print("\nFRAGMENTS FAILING TIMESTAMP ALIGNMENT")
-                print(tabulate(df_tmp.reset_index()[["trigger","sequence","crate_id","slot_id","stream_id","timestamp_first_dts","timestamp_first_dts_majority","timestamp_diff"]],
-                                headers=["Record","Seq.","Crate","Slot","Stream","Timestamp (first)","Majority timestamp","Difference"],
-                                showindex=False,tablefmt='pretty'))
-
-            return DQMTestResult(DQMResultEnum.BAD,
-                                 f'{n_different} sources have some timestamp misalignment for det_id {self.det_id}.')
-
 class CheckNFrames_WIBEth(DQMTest):
 
     def __init__(self):
@@ -223,13 +167,49 @@ class CheckNFrames_WIBEth(DQMTest):
             return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No WIBEth components found.')
         df_tmp["expected_frames"] = np.floor((df_tmp["window_end_dts"]-df_tmp["window_begin_dts"])/(32*64))+1
         df_tmp = df_tmp.join(df_dict["daqh"][["n_obj"]])
-        n_frames_wrong = (df_tmp["expected_frames"]!=df_tmp["n_obj"]).sum()
+        df_tmp["nframe_difference"] = df_tmp["expected_frames"]-df_tmp["n_obj"]
+        n_frames_wrong = (abs(df_tmp["nframe_difference"])>=2).sum()
         if n_frames_wrong==0:
             return DQMTestResult(DQMResultEnum.OK,f'OK')
-        else:            
+        else:
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_frames_wrong} / {len(df_tmp)} WIBEth fragments have the wrong number of frames.')
 
+class CheckRequestTimes_WIBEth(DQMTest):
+
+    def __init__(self,det_name,verbose=True):
+        super().__init__()
+        self.name = f'CheckRequestTimes_WIBEth'
+        self.deth_name=f'deth_k{det_name}_kWIBEth'
+        self.verbose = verbose
+
+    def run_test(self,df_dict):
+        df_tmp = df_dict["frh"].loc[df_dict["frh"]["fragment_type"]==12][["window_begin_dts","window_end_dts"]]
+        if len(df_tmp)==0:
+            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No components with detid {self.det_id} found.')
+        df_tmp = df_tmp.join(df_dict[self.deth_name][["timestamp_dts_diff_vals","timestamp_dts_diff_idx","timestamp_dts_first","n_frames"]])
+        print(df_tmp.iloc[0]["timestamp_dts_first"],df_tmp.iloc[0]["timestamp_dts_diff_vals"],df_tmp.iloc[0]["timestamp_dts_diff_idx"])
+        df_tmp["timestamp_dts_last"] = df_tmp.apply(lambda x: desparsify_array_diff_of_diff_locs_and_vals(x.timestamp_dts_first,x.timestamp_dts_diff_idx,x.timestamp_dts_diff_vals,x.n_frames*64)[-1],axis=1)
+
+        df_bad = df_tmp.loc[(df_tmp["timestamp_dts_first"]>(df_tmp["window_begin_dts"]+32))|(df_tmp["timestamp_dts_last"]<(df_tmp["window_end_dts"]-32))]
+        n_bad = len(df_bad)
+        
+        if n_bad==0:
+            return DQMTestResult(DQMResultEnum.OK,f'OK')
+        else:
+            if self.verbose:
+                df_bad = df_bad.join(df_dict["daqh"])
+                print(f"\nFRAGMENTS FAILING WIBETH WINDOW ALIGNMENT CHECK")
+                print(tabulate(df_bad.reset_index()[["trigger","sequence","crate_id","slot_id","stream_id",
+                                                     "timestamp_dts_first","timestamp_dts_last",
+                                                     "window_begin_dts","window_end_dts"]].astype('int64'),
+                                headers=["Record","Seq.","Crate","Slot","Stream",
+                                         "Timestamp (first)","Timestamp (last)",
+                                         "Window begin","Window end"],
+                                showindex=False,tablefmt='pretty'))
+
+            return DQMTestResult(DQMResultEnum.BAD,
+                                 f'{n_bad} / {len(df_tmp)} WIBEth fragments have misaligned request windows.')
 
 class CheckRMS_WIBEth(DQMTest):
 
@@ -269,8 +249,9 @@ class CheckRMS_WIBEth(DQMTest):
         else:
             if self.verbose:
                 print("CHANNELS FAILING RMS CHECK")
-                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","apa","plane"]].drop_duplicates(["channel"]),on=["channel"])
-                print(tabulate(df_tmp.reset_index()[["channel","adc_rms","apa","plane","threshold"]],
+                print(f"operator {str(self.operator)} ({self.operator.__doc__})")
+                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","element","plane"]].drop_duplicates(["channel"]),on=["channel"])
+                print(tabulate(df_tmp.reset_index()[["channel","adc_rms","element","plane","threshold"]],
                                headers=["Channel","RMS","APA/CRP","Plane","Threshold"],
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
@@ -324,123 +305,10 @@ class CheckPedestal_WIBEth(DQMTest):
         else:
             if self.verbose:
                 print("CHANNELS FAILING PEDESTAL CHECK")
-                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","apa","plane"]].drop_duplicates(["channel"]),on=["channel"])
-                print(tabulate(df_tmp.reset_index()[["channel","adc_mean","apa","plane","lower_bound","upper_bound"]],
+                df_tmp = df_tmp.merge(df_dict[self.det_data_key].reset_index()[["channel","element","plane"]].drop_duplicates(["channel"]),on=["channel"])
+                print(tabulate(df_tmp.reset_index()[["channel","adc_mean","element","plane","lower_bound","upper_bound"]],
                                headers=["Channel","Pedestal","APA/CRP","Plane","Lower Bound","Upper Bound"],
                                showindex=False,tablefmt='pretty',floatfmt=".2f"))
             return DQMTestResult(DQMResultEnum.BAD,
                                  f'{n_bad} channels have pedestal outside of range.')
-
-class CheckEmptyFragments_DAPHNE(DQMTest):
-
-    def __init__(self):
-        super().__init__()
-        self.name = "CheckEmptyFragments_DAPHNE"
-
-    def run_test(self,df_dict):
-        df_tmp1 = df_dict["frh"].loc[df_dict["frh"]["fragment_type"]==3]
-
-        if len(df_tmp1)==0:
-            return DQMTestResult(DQMResultEnum.WARNING,f"WARNING: No Self-triggered DAPHNE data found.")
-        
-        n_emptyFrames          = len(df_tmp1.loc[df_tmp1["data_size_bytes"] == 0])
-        n_filledFrames         = len(df_tmp1.loc[df_tmp1["data_size_bytes"] != 0])
-
-        if n_emptyFrames != 0:
-            return DQMTestResult(DQMResultEnum.BAD, f'{n_emptyFrames} fragments are empty ({n_filledFrames} are fine).')
-        else:
-            return DQMTestResult(DQMResultEnum.OK,f'OK')
-
-class CheckFramesInTimeWindow_DAPHNE(DQMTest):
-
-    def __init__(self):
-        super().__init__()
-        self.name = "CheckFramesInTimeWindow_DAPHNE"
-
-    def run_test(self,df_dict):
-        ...
-
-class CheckTimestampDiffs_DAPHNE(DQMTest):
-    def __init__(self):
-        super().__init__()
-        self.name = "CheckTimestampDiffs_DAPHNE"
-
-    def run_test(self, df_dict, verbose=False):
-
-        n_bad_stream, n_bad = 0, 0
-
-        if "detd_kHD_PDS_kDAPHNEStream" not in df_dict.keys() and "detd_kHD_PDS_kDAPHNE" not in df_dict.keys():
-            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No data for DAPHNE found.')
-        
-        if "deth_kHD_PDS_kDAPHNEStream" in df_dict.keys():
-
-            tmp_df_stream  = df_dict["deth_kHD_PDS_kDAPHNEStream"]
-            tmp_df_stream["ts_check"] = tmp_df_stream.apply(lambda x: 1 if (len(x.ts_diffs_vals)!=1) else 0, axis=1)
-            n_bad_stream = tmp_df_stream["ts_check"].sum()
-
-        if "deth_kHD_PDS_kDAPHNE" in df_dict.keys():
-
-            tmp_df  = df_dict["deth_kHD_PDS_kDAPHNEStream"]
-            tmp_df["ts_check"] = tmp_df.apply(lambda x: 1 if (len(x.ts_diffs_vals)!=1) else 0, axis=1)
-            n_bad = tmp_df["ts_check"].sum()
-
-        if n_bad == 0 and n_bad_stream == 0:
-            return DQMTestResult(DQMResultEnum.OK,f'OK')
-        else:
-            if verbose:
-                if n_bad != 0:
-                    print(tabulate(tmp_df.reset_index()[["trigger","sequence","ts_diffs_vals", "ts_diffs_counts", "ts_check"]],
-                                   headers=["record","sequence","ts_diffs","ts_diffs_counts","Check"],
-                                   showindex=False,tablefmt='pretty',floatfmt=".2f"))
-                elif n_bad_stream != 0:
-                    print(tabulate(tmp_df_stream.reset_index()[["trigger","sequence","ts_diffs_vals", "ts_diffs_counts", "ts_check"]],
-                                   headers=["record","sequence","ts_diffs","ts_diffs_counts","Check"],
-                                   showindex=False,tablefmt='pretty',floatfmt=".2f"))
-
-            return DQMTestResult(DQMResultEnum.BAD, f'{n_bad+n_bad_stream} links fail TS difference check.')
-
-
-class CheckADCData_DAPHNE(DQMTest):
-
-    def __init__(self):
-        super().__init__()
-        self.name = "CheckADCData_DAPHNE"
-    
-    def run_test(self, df_dict):
-
-        if "detd_kHD_PDS_kDAPHNEStream" not in df_dict.keys() and "detd_kHD_PDS_kDAPHNE" not in df_dict.keys():
-            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No data for DAPHNE found.')
-        
-        elif "detd_kHD_PDS_kDAPHNEStream" in df_dict.keys():
-
-            tmp_df_stream  = df_dict["detd_kHD_PDS_kDAPHNEStream"]
-            means = np.array(df_dict["detd_kHD_PDS_kDAPHNEStream"]["adc_mean"])
-            rmss  = np.array(df_dict["detd_kHD_PDS_kDAPHNEStream"]["adc_rms"])
-
-            if np.any(means) == 0 or np.any(rmss) == 0:
-
-                n_bad_means_stream = len(means[np.where(means == 0)])
-                n_bad_rmss_stream  = len(rmss[np.where(rmss == 0)])
-                return DQMTestResult(DQMResultEnum.BAD, f'{np.max(n_bad_means_stream, n_bad_rmss_stream)} channels have problems')
-            
-            else:
-                return DQMTestResult(DQMResultEnum.OK,f'OK')
-            
-        else:
-
-            tmp_df_stream  = df_dict["detd_kHD_PDS_kDAPHNE"]
-            means = np.array(df_dict["detd_kHD_PDS_kDAPHNE"]["adc_mean"])
-            rmss  = np.array(df_dict["detd_kHD_PDS_kDAPHNE"]["adc_rms"])
-
-            if np.any(means) == 0 or np.any(rmss) == 0:
-
-                n_bad_means = len(means[np.where(means == 0)])
-                n_bad_rmss  = len(rmss[np.where(rmss == 0)])
-                return DQMTestResult(DQMResultEnum.BAD, f'{np.max(n_bad_means, n_bad_rmss)} channels have problems')
-            
-            else:
-                return DQMTestResult(DQMResultEnum.OK,f'OK')
-
-
-        
 
