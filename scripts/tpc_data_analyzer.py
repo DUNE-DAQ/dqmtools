@@ -196,6 +196,7 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
             n_processed_records += 1
 
     df_dict = dfc.concatenate_dataframes(df_dict)
+    time_meta = df_dict["trh"].iloc[0]["trigger_time"].strftime('%Y%m%d_%X').replace(":", "")
 
     dqm_test_suite.run_test(df_dict)
 
@@ -237,7 +238,7 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
         pio.write_image(v, filename, format=extension, scale=4)
         files.append(filename)
 
-    pdf_name = f'run{df_dict["trh"].index[0][0]}_raw_adc_data_analysis.pdf'
+    pdf_name = f'run{df_dict["trh"].index[0][0]}_raw_adc_data_analysis_{time_meta}.pdf'
     if vector:
         name = pdf_to_pdf(files, pdf_name)
     else:
