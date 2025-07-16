@@ -48,7 +48,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
         map_name = None
         if op_env=="np02vd":
-            map_name="PD2VDBottomTPCChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
@@ -59,8 +59,8 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     elif(frag_type==daqdataformats.FragmentType.kTDEEth and det_id==detdataformats.DetID.Subdetector.kVD_TopTPC.value):
         map_name = None
-#        if op_env=="np02vd":
-#            map_name="PD2VDBottomTPCChannelMap"
+        if op_env=="np02vd":
+            map_name="PD2VDTPCChannelMap"
         return rawdatautils.unpack.utils.TDEEthUnpacker(map_name,
                                                         ana_data_prescale=ana_data_prescale,
                                                         wvfm_data_prescale=wvfm_data_prescale)
@@ -82,7 +82,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2VDBottomTPCChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
@@ -98,7 +98,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2VDBottomTPCChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
@@ -114,7 +114,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
-            map_name="PD2VDBottomTPCChannelMap"
+            map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
             map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
