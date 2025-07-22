@@ -144,16 +144,43 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
         df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
     df_tmp = df_tmp.sort_values("channel")
 
+    #fill in missing time values with np.nan
+    all_time_ticks = sorted(set().union(*df_tmp["timestamps_trg_sub"]))
+    common_time = np.array(all_time_ticks)
+
+    def map_to_common_time(timestamps, adcs, common_time):
+        time_to_adc = dict(zip(timestamps, adcs))
+        return np.array([time_to_adc.get(t, np.nan) for t in common_time])
+
+    df_tmp["adcs_full"] = df_tmp.apply(
+        lambda row: map_to_common_time(row["timestamps_trg_sub"], row["adcs"], common_time),
+        axis=1
+    )
+
+    #now fill in missing channels with np.nan
+    expected_channels = np.arange(df_tmp["channel"].min(),df_tmp["channel"].max()+1)
+    df_tmp_indexed = df_tmp.set_index("channel")
+    df_reindexed = df_tmp_indexed.reindex(expected_channels)
+
+    max_adc_len = df_tmp["adcs_full"].apply(len).max()
+    df_reindexed["adcs_full"] = df_reindexed["adcs_full"].apply(
+        lambda x: x if isinstance(x, np.ndarray) else np.full(max_adc_len, np.nan)
+    )
+
+    df_reindexed["channel"] = df_reindexed.index
+
+    df_tmp = df_reindexed
+
     if orientation=="horizontal":
         xdata = df_tmp.iloc[0]["timestamps_trg_sub"]
         ydata = df_tmp["channel"].values
-        zdata = np.vstack(df_tmp["adcs"].values)
+        zdata = np.vstack(df_tmp["adcs_full"].values)
         yaxis_title='Offline Channel'
         xaxis_title='DTS time ticks (16ns)'
     else:
         ydata = df_tmp.iloc[0]["timestamps_trg_sub"]
         xdata = df_tmp["channel"].values
-        zdata = np.vstack(df_tmp["adcs"].values).T
+        zdata = np.vstack(df_tmp["adcs_full"].values).T
         xaxis_title='Offline Channel'
         yaxis_title='DTS time ticks (16ns)'
 
@@ -168,9 +195,9 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
 
         zdata = np.flip(zdata,0)
         if zmin is None:
-            zmin = np.min(zdata)
+            zmin = np.nanmin(zdata)
         if zmax is None:
-            zmax = np.max(zdata)
+            zmax = np.nanmax(zdata)
 
         col_norm = Normalize(vmin=zmin, vmax=zmax)
         scalarMap  = cm.ScalarMappable(norm=col_norm, cmap=colorscale )
