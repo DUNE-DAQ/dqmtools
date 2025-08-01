@@ -11,8 +11,6 @@ import hdf5libs
 import concurrent.futures
 import os
 
-import pytz
-
 import click
 @click.command()
 @click.argument('input_data', type=click.Path(exists=True))
@@ -23,7 +21,7 @@ import click
 @click.option('--imgtype', default='svg', help='Type of image to write')
 @click.option('--element',default=None, help='specific element to plot')
 @click.option('--plane',default=None, help='specific plane to plot')
-@click.option('--det-id', defalt='VD_Bottom_TPC', help='detector id (HD_TPC, VD_Bottom_TPC, VD_Top_TPC)')
+@click.option('--det-id', default='VD_Bottom_TPC', help='detector id (HD_TPC, VD_Bottom_TPC, VD_Top_TPC)')
 
 def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, plane, det_id):
 
@@ -32,13 +30,13 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
             tpc_det_key=f"detd_kHD_TPC_kWIBEth"
             default_elements = [1,2,3,4]
         case 'VD_Bottom_TPC':
-            tpc_det_key=f"detd_kVD_Bottom_TPC_kWIBEth"
+            tpc_det_key=f"detd_kVD_BottomTPC_kWIBEth"
             default_elements = [5,6]
         case 'VD_Top_TPC':
-            tpc_det_key=f"detd_kVD_Top_TPC_kTDEEth"
+            tpc_det_key=f"detd_kVD_TopTPC_kTDEEth"
             default_elements = [2,3]
         case _:
-            print('ERROR: det_id must be one of [HD_TPC, VD_Bottom_TPC, VD_Top_TPC].')
+            print('ERROR: det_id must be one of [HD_TPC, VD_BottomTPC, VD_TopTPC].')
             return
 
     filename = input_data
@@ -96,11 +94,6 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
         for ele in elements:
             for plane in planes:
                 myplanes.append((ele,plane))
-
-        #planes = []
-        #for apa in ["APA2"]:
-        #    for plane in [0,1,2]:
-        #        planes.append((apa,plane))
         
         df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
         df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
