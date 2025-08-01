@@ -231,12 +231,19 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
         figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
 
     print("Saving figures")
-    files = []
-    for k, v in figs.items():
-        print(f"Saving {k}")
-        filename = f"{k}.{extension}"
-        pio.write_image(v, filename, format=extension, scale=4)
-        files.append(filename)
+    def save(num, name, fig):
+        print(f"Saving {name}")
+        filename = f"{name}.{extension}"
+        pio.write_image(fig, filename, format=extension, scale=4)
+        return num, filename
+
+    files = [None] * len(figs)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
+        future_p = {executor.submit(save, i, k, v) for i, (k, v) in enumerate(figs.items())}
+        for future in concurrent.futures.as_completed(future_p):
+            res = future.result()
+            files[res[0]] = res[1]
+            print(f"Completed image {res}")
 
     pdf_name = f'run{df_dict["trh"].index[0][0]}_raw_adc_data_analysis_{time_meta}.pdf'
     if vector:
