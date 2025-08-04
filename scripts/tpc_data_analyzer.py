@@ -54,7 +54,7 @@ def make_bad_channels_table(df_dict, high_channels,threshold,det_name,run=None,t
         figs.append(fig)
     return figs
 
-def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10):
+def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10, tp_overlay : bool = False):
     print(tpc_det_name)
     match tpc_det_name:
         case 'HD_TPC':
@@ -97,11 +97,12 @@ def make_evd(df_dict : dict, tpc_det_name : str, nworkers : int = 10):
         if(len(df_tmp)==0):
             return "NO-DATA-FOUND"
         fig = plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
-                                    offset=True,make_static=True,make_tp_overlay=False,
+                                    offset=True,make_static=True,make_tp_overlay=tp_overlay,
                                     orientation="vertical",colorscale='plasma',color_range=(-256,256))
         print(f"Figure for {ele} plane {plane} processed...")
         fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, Element {ele} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
         fig_name = f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_Element{ele}_plane{plane}"
+        if tp_overlay: fig_name = f"{fig_name}_tp"
         return fig_name, fig
 
     figs = {}
@@ -214,14 +215,16 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
 
     figs = {}
     print("Plotting RMS")
-    figs[f"pdune2_{tpc_det_name}_rms"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name)
-    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_WIBEth_by_channel(df_dict,var="adc_rms",det_name=tpc_det_name,yrange=[-1,60])
+    figs[f"pdune2_{tpc_det_name}_rms"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'])
+    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],yrange=[-1,60])
     print("Plotting ADC mean")
-    figs[f"pdune2_{tpc_det_name}_mean"] = plot_WIBEth_by_channel(df_dict,var="adc_mean",det_name=tpc_det_name)
+    figs[f"pdune2_{tpc_det_name}_mean"] = plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'])
 
     print("Plotting event display")
-    evd_figs = make_evd(df_dict, tpc_det_name)
-    figs = figs | evd_figs
+    figs = figs | make_evd(df_dict, tpc_det_name, tp_overlay = False)
+    if "trgd_kDAQ_kTriggerPrimitive" in df_dict:
+        print("Plotting TP event display")
+        figs = figs | make_evd(df_dict, tpc_det_name, tp_overlay = True)
 
     print("Plotting table of Initial hit thresholds to set for the TPG")
     figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name)

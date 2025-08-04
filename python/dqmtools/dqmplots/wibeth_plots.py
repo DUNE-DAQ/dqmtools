@@ -173,14 +173,16 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
     #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_elements = len(np.unique(df_tmp["element"]))
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
-    df_tmp = df_tmp.set_index(idx_names)
+    # n_elements = len(np.unique(df_tmp["element"]))
+    # idx_names = df_tmp.index.names
+    # df_tmp = df_tmp.reset_index()
+    # df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
+    # df_tmp = df_tmp.set_index(idx_names)
 
     df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+    print(df_tmp)
 
     if len(df_tmp)==0:
         return fig
@@ -188,10 +190,11 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
 
-    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + + x.samples_to_peak * 16, axis=1)
+    # df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_start + x.samples_to_peak * 16 - x.trigger_timestamp_dts,axis=1)
 
-    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.time_over_threshold}<br>tot: {x.time_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
+    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.samples_over_threshold}<br>tot: {x.samples_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
 
     if orientation=="horizontal":
         xdata = df_tmp["time_peak_trg_sub"]
@@ -211,12 +214,17 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
                     colorscale="delta", # one of plotly colorscales
                     cmin = 0,
                     cmax = zmax,
-                    showscale=True,colorbar=dict( x=1.12 )
+                    showscale=True,colorbar=dict( x=1.2 ),
                     ),
         text=df_tmp["marker_string"],
     )
-
     fig.add_trace(tp_fig)
+    fig.update_layout(legend=dict(
+        yanchor="top",
+        y=1.1,
+        xanchor="right",
+        x=1.35
+    ))
 
     return fig
 
@@ -299,7 +307,7 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
     df_tmp = df_tmp.reset_index()
     df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
-    df_tmp["time_end_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + x.time_over_threshold,axis=1)
+    df_tmp["time_end_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + x.samples_over_threshold,axis=1)
 
     for index, tp in df_tmp.iterrows():
         fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)
