@@ -16,9 +16,6 @@ properties = ['Trigger', 'Sequence', 'Src ID', 'Time Start', 'Samples to Peak',
               'Samples over Threshold', 'Channels', 'Plane', 'Element', 'ADC Integral', 'ADC Peak', 'Detector ID', 'Flag', 'ID ta']
 tp_prop = ['time_start', 'samples_to_peak', 'samples_over_threshold', 'adc_integral', 'adc_peak']
 
-
-save_dir = "/nfs/home/samikshy/daq/fddaq-v5.3.2-rc4-a9/sourcecode/dqmtools/test_plots"
-
 def binning(value, bins):
     bin_min = np.min(value)
     bin_max = np.max(value)
@@ -79,7 +76,6 @@ def main(filenames, nrecords, nworkers, save_dir):
 
     df_dict = {}
     n_processed_records = 0
-    t0 = time.time()
 
     for filename in filenames:
         print(f'Processing file {filename}.')
@@ -104,9 +100,6 @@ def main(filenames, nrecords, nworkers, save_dir):
 
     print("Structure of df_tp:", df_tp.head())
 
-    t = time.time() - t0
-
-    print("Time taken:", t, "seconds")
     #df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
     #df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
     #trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
@@ -143,20 +136,13 @@ def main(filenames, nrecords, nworkers, save_dir):
         fig_name = f"TP_properties_run{df_tp['run'].iloc[0]}_{prop}"
         figs[fig_name] = fig
     
-    t = time.time() - t
-    print("Time taken:", t, "seconds")
     extension = "png"  
 
 # Save in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
         files = list(executor.map(lambda kv: save_plot(kv, extension, save_dir), figs.items()))
     
-    t = time.time() - t
-    print("Time taken:", t, "seconds")
-    
     final_pdf = images_to_pdf(files, "tp_properties_output.pdf", save_dir)
-    t = time.time() - t
-    print("Time taken:", t, "seconds")
     print(f"TP histogram PDF saved to {final_pdf}")
 
 if __name__ == '__main__':
