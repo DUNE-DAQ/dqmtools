@@ -21,23 +21,9 @@ import click
 @click.option('--imgtype', default='svg', help='Type of image to write')
 @click.option('--element',default=None, help='specific element to plot')
 @click.option('--plane',default=None, help='specific plane to plot')
-@click.option('--det-id', default='VD_Bottom_TPC', help='detector id (HD_TPC, VD_Bottom_TPC, VD_Top_TPC)')
+@click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
 
-def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, plane, det_id):
-
-    match det_id:
-        case 'HD_TPC':
-            tpc_det_key=f"detd_kHD_TPC_kWIBEth"
-            default_elements = [1,2,3,4]
-        case 'VD_Bottom_TPC':
-            tpc_det_key=f"detd_kVD_BottomTPC_kWIBEth"
-            default_elements = [5,6]
-        case 'VD_Top_TPC':
-            tpc_det_key=f"detd_kVD_TopTPC_kTDEEth"
-            default_elements = [2,3]
-        case _:
-            print('ERROR: det_id must be one of [HD_TPC, VD_BottomTPC, VD_TopTPC].')
-            return
+def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, plane):
 
     filename = input_data
     if(os.path.isdir(input_data)):
@@ -78,6 +64,13 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
         pd.set_option('display.max_columns', None)
         print(df_dict["trh"])
 
+<<<<<<< HEAD
+=======
+        if(hd):
+            tpc_det_key="detd_kHD_TPC_kWIBEth"
+        else:
+            tpc_det_key="detd_kVD_BottomTPC_kWIBEth"
+>>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
         offset=True
         
         if plane is not None:
@@ -85,6 +78,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
         else:
             planes = [0, 1, 2]
             
+<<<<<<< HEAD
         if element is not None:
             elements = [ int(element) ]
         else:
@@ -94,6 +88,25 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
         for ele in elements:
             for plane in planes:
                 myplanes.append((ele,plane))
+=======
+        if component is not None:
+            elements = [ int(component) ]
+        else:
+            if(hd):
+                elements = [1,2,3,4]
+            else:
+                elements = [4,5]
+
+        myplanes = []
+        for el in elements:
+            for plane in planes:
+                myplanes.append((el,plane))
+
+        #planes = []
+        #for apa in ["APA2"]:
+        #    for plane in [0,1,2]:
+        #        planes.append((apa,plane))
+>>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
         
         df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
         df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
@@ -117,12 +130,20 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, element, pl
             fig = plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
                                       offset=True,make_static=True,make_tp_overlay=False,
                                       orientation="vertical",colorscale='plasma',color_range=(-256,256))
+<<<<<<< HEAD
             print(f"Figure for {ele} plane {plane} processed...")
             fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, Element {ele} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
             fig_name = f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_Element{ele}_plane{plane}.{imgtype}"
             fig.write_image(f"{output_dir}/{fig_name}", scale=3)
             return fig_name
 
+=======
+            print(f"Figure for Element {apa} plane {plane} processed...")
+            fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
+            fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}", scale=3)
+            return f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}"
+        
+>>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
         with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
             future_p = {executor.submit(make_adc_map_fig,
                                         p[0],p[1]): p for p in myplanes }

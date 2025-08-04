@@ -28,55 +28,117 @@ except:
 from .plot_utils import *
 
 from .common_plots import *
-from .tpc_plots import *
 
-def plot_WIBEth_pulser_by_channel(df_dict,det_name,run=None,trigger=None,seq=None,jpeg_base=None):
+def get_sampling_factor(det_id):
+    if det_id==3 or det_id==10:
+        return 32
+    if det_id==11:
+        return 31.25
+    else:
+        return 1
 
-    if f"detd_k{det_name}_kWIBEth" not in df_dict.keys():
-        print(f"Can not make plots for detd_k{det_name}_kWIBEth, no DATA found")
-        return
-    
-    df_tmp, index = dfc.select_record(df_dict[f"detd_k{det_name}_kWIBEth"],run,trigger,seq)
-    df_tmp= df_tmp.reset_index()
-    
-    trigger_time = get_CERN_timestamp(df_dict,index);
-    
-    fig = px.scatter(df_tmp,x="channel",y=["adc_max","adc_min","adc_median"],
-                     width=1000,height=600)
-    fig.update_layout(xaxis_title='Channel',
-                      yaxis_title="ADC value",
-                      legend_title=None,
-                      title=f'WIB Pulser Check: Run {index.run}, Record ({index.trigger,index.sequence}), Time {trigger_time}')
+def plot_TPCData_by_channel(df_dict,var,det_keys,
+                            run=None,trigger=None,seq=None,
+                            tpc_chmap=None,
+                            facet_by_plane=True,
+                            title="PLOT_TITLE_DEFAULT",
+                            ylabel=None,yrange=None,
+                            width=None,height=None,
+                            jpeg_base=None):
+
+    #check and filter out to only valid keys
+    det_keys[:] = get_valid_keys(df_dict,det_keys)
+
+    if not det_keys:
+        print("No valid data keys found.")
+        return None
+
+    #get all our data
+    df_all = []
+    index = None
+    for det_key in det_keys:
+        df_tmp, index = dfc.select_record(df_dict[det_key],run,trigger,seq)
+        df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp[["channel",var,"plane","element"]]
+        df_all.append(df_tmp)
+    df_all = pd.concat(df_all,ignore_index=True)
+
+    #get the label name
+    if tpc_chmap is None:
+        df_all["label"] = "Element " + df_all["element"].astype(str)
+    else:
+        df_all["label"] = df_all['channel'].map(tpc_chmap.get_element_name_from_offline_channel)
+    if not facet_by_plane:
+        df_all["label"] = df_all["label"] + ", Plane " + df_all["plane"].astype(str)
+
+    trigger_time = get_CERN_timestamp(df_dict,index)
+    facet_col = "plane" if facet_by_plane else None
+    if ylabel is None: ylabel=var
+    if title=="PLOT_TITLE_DEFAULT":
+        title=f'Run {index.run}, Record {int(index.trigger),int(index.sequence)}, Time {trigger_time}'
+    elif title is not None:
+        title=f'{title}: Run {index.run}, Record ({int(index.trigger),int(index.sequence)}), Time {trigger_time}'
+
+
+
+    fig = px.scatter(df_all,
+                     x="channel",
+                     y=var,
+                     color="label",
+                     facet_col=facet_col,
+                     category_orders={"plane": sorted(df_all["plane"].unique())},
+                     labels={"channel": "Channel", var: ylabel, "label":""},
+                     title=title,
+                     width=width,
+                     height=height)
+
+    if facet_by_plane:
+        fig.for_each_annotation(lambda a: a.update(text=f"Plane {a.text.split('=')[-1]}"))
+
+    if yrange is not None:
+        fig.update_yaxes(range=yrange)
+
     if jpeg_base is not None:
         fig.write_image(f"{jpeg_base}_run{index.run}_trigger{index.trigger}_seq{index.sequence}.jpeg")
+
     return fig
 
-def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
-                        offset=True,offset_type="median",
-                        make_static=False,make_tp_overlay=False,
-                        orientation="vertical",colorscale='plasma',color_range=(-256,256),
-                        run=None,trigger=None,seq=None):
+
+def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
+                     offset=True,offset_type="median",
+                     make_static=False,make_tp_overlay=False,
+                     orientation="vertical",colorscale='plasma',color_range=(-256,256),
+                     run=None,trigger=None,seq=None):
 
     offset_var = f'adc_{offset_type}'
-    
-    tpc_wvfm_key = "detw"+tpc_det_key[4:]
+    element_id = int(ele[3]) #assuming APAX or CRPX
 
-    if tpc_det_key not in df_dict.keys():
-        print(f"Can not make plots for {tpc_det_key}, no DATA found")
+    #check and filter out to only valid keys
+    det_keys[:] = get_valid_keys(df_dict,det_keys)
+
+    if not det_keys:
+        print("No valid data keys found.")
         return empty_plot()
 
-    if tpc_wvfm_key not in df_dict.keys():
-        print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
-        return empty_plot()
-    df_tmp = df_dict[tpc_wvfm_key]
-    df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
+    #get all our data
+    df_all = []
+    index=None
+    for det_key in det_keys:
+        df_tmp = df_dict[det_key]
+        df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
 
-    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
-    if offset:
-        df_tmp = df_tmp.merge(df_dict[tpc_det_key][offset_var],left_index=True,right_index=True)
+        if len(df_tmp)==0: continue
 
-    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
-    df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+        if offset:
+            df_tmp = df_tmp.merge(df_dict["detd"+det_key[4:]][offset_var],left_index=True,right_index=True)
+
+        df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+        df_tmp = df_tmp.reset_index()
+        df_all.append(df_tmp)
+
+    df_tmp = pd.concat(df_all,ignore_index=True)
+
     df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
     if offset:
         df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
@@ -172,26 +234,20 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     #if we are, let's grab the TPs
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
-    #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_elements = len(np.unique(df_tmp["element"]))
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
-    df_tmp = df_tmp.set_index(idx_names)
-
-    df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
+    df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
     if len(df_tmp)==0:
         return fig
-    
+
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
 
-    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
 
-    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.time_over_threshold}<br>tot: {x.time_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
+    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_end_trg_sub}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
 
     if orientation=="horizontal":
         xdata = df_tmp["time_peak_trg_sub"]
@@ -220,50 +276,56 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
 
     return fig
 
-
-def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
-                         offset=False,offset_type='median',
-                         overlay_tps=False,
-                         run=None,trigger=None,seq=None):
+def plot_TPC_waveform(df_dict,det_keys,channel,
+                      offset=False,offset_type='median',
+                      overlay_tps=False,
+                      run=None,trigger=None,seq=None):
 
     offset_var = f'adc_{offset_type}'
-    
-    tpc_wvfm_key = "detw"+tpc_det_key[4:]
 
-    if tpc_det_key not in df_dict.keys():
-        print(f"Can not make plots for {tpc_det_key}, no DATA found")
+    #check and filter out to only valid keys
+    det_keys[:] = get_valid_keys(df_dict,det_keys)
+
+    if not det_keys:
+        print("No valid data keys found.")
         return empty_plot()
 
-    if tpc_wvfm_key not in df_dict.keys():
-        print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
-        return empty_plot()
+    #get all our data
+    df_all = []
+    index = None
+    for det_key in det_keys:
 
-    df_tmp = df_dict[tpc_wvfm_key]
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
-    df_tmp = df_tmp.set_index(idx_names)
+        df_tmp = df_dict[det_key]
+        idx_names = df_tmp.index.names
+        df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
+        df_tmp = df_tmp.set_index(idx_names)
 
-    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
-    if offset:
-        df_tmp = df_tmp.merge(df_dict[tpc_det_key][offset_var],left_index=True,right_index=True)
+        if len(df_tmp)==0: continue
 
-    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
-    df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+        if offset:
+            df_tmp = df_tmp.merge(df_dict["detd"+det_key[4:]][offset_var],left_index=True,right_index=True)
 
-    df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
+        df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+        df_tmp = df_tmp.reset_index()
+        df_all.append(df_tmp)
+
+    df_all = pd.concat(df_all,ignore_index=True)
+
+    df_all["timestamps_trg_sub"] = df_all.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
     yaxis_title = "ADC counts"
     if offset:
-        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
+        df_all["adcs"] = df_all["adcs"]-df_all[offset_var]
         yaxis_title = yaxis_title + " (pedestal subtracted)"
 
-    print(df_tmp)
-    print(df_tmp["timestamps"].values[0])
-    print(df_tmp["adcs"].values[0])
-    fig = go.Figure(data=go.Scatter(x=df_tmp["timestamps_trg_sub"].values[0], y=df_tmp["adcs"].values[0]))
+    #print(df_tmp)
+    #print(df_tmp["timestamps"].values[0])
+    #print(df_tmp["adcs"].values[0])
+    fig = go.Figure(data=go.Scatter(x=df_all["timestamps_trg_sub"].values[0], y=df_all["adcs"].values[0]))
 
 
-    fig.update_layout(xaxis_title='DTS Timestmap (16ns) relative to trigger',
+    fig.update_layout(xaxis_title='DTS Timestamp (16ns) relative to trigger',
                       yaxis_title=yaxis_title,
                       title=f"Waveform for channel {channel}")
 
@@ -275,15 +337,8 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
 
     if "trgd_kDAQ_kTriggerPrimitive" not in df_dict:
         return fig
-            
-    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
-    #ugly hack while we can't better decide which src ids to ignore for duplicated TPs
-    n_elements = len(np.unique(df_tmp["element"]))
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[(df_tmp["src_id"]<n_elements*3)]
-    df_tmp = df_tmp.set_index(idx_names)
+    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
     idx_names = df_tmp.index.names
     df_tmp = df_tmp.reset_index()
@@ -294,12 +349,12 @@ def plot_WIBEth_waveform(df_dict,tpc_det_key,channel,
 
     if len(df_tmp)==0:
         return fig
-    
+
     df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
     df_tmp = df_tmp.reset_index()
-    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_peak - x.trigger_timestamp_dts,axis=1)
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
-    df_tmp["time_end_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + x.time_over_threshold,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
 
     for index, tp in df_tmp.iterrows():
         fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)

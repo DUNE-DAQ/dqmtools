@@ -37,7 +37,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
-            map_name="HDColdboxChannelMap"
+            map_name="HDColdboxTPCChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         return rawdatautils.unpack.utils.WIBEthUnpacker(map_name,
@@ -50,7 +50,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         if op_env=="np02vd":
             map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
-            map_name="VDColdboxChannelMap"
+            map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
             map_name="ICEBERGChannelMap"
         return rawdatautils.unpack.utils.WIBEthUnpacker(map_name,
@@ -59,8 +59,8 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     elif(frag_type==daqdataformats.FragmentType.kTDEEth and det_id==detdataformats.DetID.Subdetector.kVD_TopTPC.value):
         map_name = None
-#        if op_env=="np02vd":
-#            map_name="PD2VDBottomTPCChannelMap"
+        if op_env=="np02vd":
+            map_name="PD2VDTPCChannelMap"
         return rawdatautils.unpack.utils.TDEEthUnpacker(map_name,
                                                         ana_data_prescale=ana_data_prescale,
                                                         wvfm_data_prescale=wvfm_data_prescale)
@@ -78,13 +78,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
-            map_name="HDColdboxChannelMap"
+            map_name="HDColdboxTPCChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
             map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
-            map_name="VDColdboxChannelMap"
+            map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
             map_name="ICEBERGChannelMap"
         return rawdatautils.unpack.utils.TriggerPrimitiveUnpacker(map_name)
@@ -94,13 +94,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
-            map_name="HDColdboxChannelMap"
+            map_name="HDColdboxTPCChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
             map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
-            map_name="VDColdboxChannelMap"
+            map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
             map_name="ICEBERGChannelMap"
         return rawdatautils.unpack.utils.TriggerActivityUnpacker(map_name)
@@ -110,13 +110,13 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
         if op_env=="np04hd":
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
-            map_name="HDColdboxChannelMap"
+            map_name="HDColdboxTPCChannelMap"
         elif op_env=="iceberghd" or op_env=="iceberg":
             map_name="ICEBERGChannelMap"
         if op_env=="np02vd":
             map_name="PD2VDTPCChannelMap"
         elif op_env=="np02vdcoldbox":
-            map_name="VDColdboxChannelMap"
+            map_name="VDColdboxTPCChannelMap"
         elif op_env=="icebergvd":
             map_name="ICEBERGChannelMap"
         return rawdatautils.unpack.utils.TriggerCandidateUnpacker(map_name)
