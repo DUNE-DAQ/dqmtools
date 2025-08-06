@@ -208,7 +208,8 @@ def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_d
 
 def select_record(df,run=None,trigger=None,sequence=None):
     if (run is None) and (trigger is None) and (sequence is None):
-        index = rdb = df.index[0][0:3]
+        index = [df.index[0][0:3]]
+        rdb = {"run" : index[0][0], "trigger" : index[0][1], "sequence" : index[0][2]}
     else:
         qstr=''
         if run is not None:
@@ -224,12 +225,15 @@ def select_record(df,run=None,trigger=None,sequence=None):
             if len(qstr)!=0: qstr = qstr+" and "
             qstr = qstr+f'sequence=={sequence}'
         index = df.query(qstr).index#[0][0:3]
+        index = pd.MultiIndex.from_tuples([i[:3] for i in index], names=index.names[:3])
         rdb = {}
         for i in ["run", "trigger", "sequence"]:
             values = np.unique(index.get_level_values(i))
             rdb[i] = values[0] if len(values) == 1 else values
+        index = index[~index.duplicated(keep='first')].to_list()
+
     try:
-        return df.loc[index], RecordDataBase(**rdb)
+        return pd.concat([df.loc[i] for i in index]), RecordDataBase(**rdb)
     except KeyError as err:
         print(f'index {index[0:3]} not found.')
         return None, None

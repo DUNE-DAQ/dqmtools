@@ -189,8 +189,7 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     df_tmp = df_tmp.reset_index()
 
     df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
-    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + + x.samples_to_peak * 16, axis=1)
-    # df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_start + x.samples_to_peak * 16 - x.trigger_timestamp_dts,axis=1)
+    df_tmp["time_peak_trg_sub"] = df_tmp.apply(lambda x: x.time_start_trg_sub + x.samples_to_peak * 16, axis=1)
 
     df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_start_trg_sub+x.samples_over_threshold}<br>tot: {x.samples_over_threshold}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
 
