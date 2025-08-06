@@ -208,21 +208,28 @@ def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_d
 
 def select_record(df,run=None,trigger=None,sequence=None):
     if (run is None) and (trigger is None) and (sequence is None):
-        index = df.index[0][0:3]
+        index = rdb = df.index[0][0:3]
     else:
         qstr=''
         if run is not None:
             qstr = qstr+f'run=={run}'
         if trigger is not None:
             if len(qstr)!=0: qstr = qstr+" and "
-            qstr = qstr+f'trigger=={trigger}'
+            if hasattr(trigger, "__iter__"):
+                for t in trigger:
+                    qstr = qstr + f'trigger=={t}'+ (" or " if t != trigger[-1] else "")
+            else:
+                qstr = qstr+f'trigger=={trigger}'
         if sequence is not None:
             if len(qstr)!=0: qstr = qstr+" and "
             qstr = qstr+f'sequence=={sequence}'
-        index = df.query(qstr).index[0][0:3]
-    
+        index = df.query(qstr).index#[0][0:3]
+        rdb = {}
+        for i in ["run", "trigger", "sequence"]:
+            values = np.unique(index.get_level_values(i))
+            rdb[i] = values[0] if len(values) == 1 else values
     try:
-        return df.loc[index], RecordDataBase(run=index[0],trigger=index[1],sequence=index[2])
+        return df.loc[index], RecordDataBase(**rdb)
     except KeyError as err:
         print(f'index {index[0:3]} not found.')
         return None, None

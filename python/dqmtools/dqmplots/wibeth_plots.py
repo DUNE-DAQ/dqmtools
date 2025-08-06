@@ -182,8 +182,6 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     df_tmp = df_tmp.loc[(df_tmp["element"]==ele)&(df_tmp["plane"]==plane)]
     df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
-    print(df_tmp)
-
     if len(df_tmp)==0:
         return fig
     

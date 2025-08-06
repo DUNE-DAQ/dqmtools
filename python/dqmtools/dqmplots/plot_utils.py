@@ -15,7 +15,10 @@ except:
     raise
 
 def get_CERN_timestamp(df_dict,index):
-    trigger_time = df_dict['trh'].loc[(index.run,index.trigger,index.sequence)]["trigger_time"]
+    def get_first(v):
+        return v[0] if hasattr(v, "__iter__") else v
+
+    trigger_time = df_dict['trh'].loc[(get_first(index.run),get_first(index.trigger),get_first(index.sequence))]["trigger_time"]
     return trigger_time.astimezone(pytz.timezone("Europe/Zurich"))
 
 def _rename_PD2HD_APAs(apa_name):

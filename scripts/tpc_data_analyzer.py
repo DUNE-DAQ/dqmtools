@@ -148,7 +148,7 @@ def images_to_pdf(figs, name = "raw_adc_data_analysis.pdf"):
 @click.option('--vector',is_flag=True, help='Images in a pdf vector graphics rather than raster')
 @click.option('--rms-threshold', default=100, help = "Minimum rms value for a channel to be considered noisy (default:100)")
 @click.option('--mean-rms-factor', default=5, help = "factor to multiply the mean rms by when determining the hit threshold (default:5)")
-def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_factor):
+def main(filenames, nrecords, trigger, nworkers, hd, vector, rms_threshold, mean_rms_factor):
 
     if vector:
         extension = "pdf"
@@ -213,12 +213,15 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
             print(f'Results for {test.get_name()}:')
             print(test.get_table(show_last_update=False))
 
+    triggers = list(range(1, nrecords + 1, 1))
+    if len(triggers) == 1: triggers = triggers[0]
+
     figs = {}
     print("Plotting RMS")
-    figs[f"pdune2_{tpc_det_name}_rms"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'])
-    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],yrange=[-1,60])
+    figs[f"pdune2_{tpc_det_name}_rms"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'], trigger = triggers)
+    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'],yrange=[-1,60], trigger = triggers)
     print("Plotting ADC mean")
-    figs[f"pdune2_{tpc_det_name}_mean"] = plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'])
+    figs[f"pdune2_{tpc_det_name}_mean"] = plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_kWIBEth'], trigger = triggers)
 
     print("Plotting event display")
     figs = figs | make_evd(df_dict, tpc_det_name, tp_overlay = False)

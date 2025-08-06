@@ -73,11 +73,18 @@ def plot_TPCData_by_channel(df_dict,var,det_keys,
 
     trigger_time = get_CERN_timestamp(df_dict,index)
     facet_col = "plane" if facet_by_plane else None
+
+    if hasattr(index.trigger, "__iter__"):
+        trigger_label = f"{int(min(index.trigger))}-{int(max(index.trigger))}"
+    else:
+        trigger_label = int(index.trigger)
+    def_title = f'Run {index.run}, Record {trigger_label,int(index.sequence)}, Time {trigger_time}'
+    
     if ylabel is None: ylabel=var
     if title=="PLOT_TITLE_DEFAULT":
-        title=f'Run {index.run}, Record {int(index.trigger),int(index.sequence)}, Time {trigger_time}'
+        title=def_title
     elif title is not None:
-        title=f'{title}: Run {index.run}, Record ({int(index.trigger),int(index.sequence)}), Time {trigger_time}'
+        title=f'{title}: {def_title}'
 
 
 
@@ -99,7 +106,7 @@ def plot_TPCData_by_channel(df_dict,var,det_keys,
         fig.update_yaxes(range=yrange)
 
     if jpeg_base is not None:
-        fig.write_image(f"{jpeg_base}_run{index.run}_trigger{index.trigger}_seq{index.sequence}.jpeg")
+        fig.write_image(f"{jpeg_base}_run{index.run}_trigger{trigger_label}_seq{index.sequence}.jpeg")
 
     return fig
 
