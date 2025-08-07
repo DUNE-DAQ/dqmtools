@@ -5,6 +5,7 @@ import plotly.io as pio
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcol
 from pypdf import PdfWriter
+import numpy.ma as ma
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -23,6 +24,9 @@ tp_prop = ['time_start', 'samples_to_peak', 'samples_over_threshold', 'adc_integ
 def tp_metrics(df_tp):
     elements = np.unique(df_tp['element'].to_numpy())
     planes = np.unique(df_tp['plane'].to_numpy())
+    ind_plane = [0, 1]
+    label = ['U plane', 'V plane']
+
     figs = {}
 
     def tp_rate_channel(df_tp):
@@ -64,7 +68,6 @@ def tp_metrics(df_tp):
 
     def tp_count_planes(df_tp):
         fig = make_subplots(rows=1, cols=2, subplot_titles=["U plane", "V plane"], horizontal_spacing=0.1)
-        ind_plane = [0, 1]
         colors = ['green', 'blue']
 
         for i, pl in enumerate(ind_plane):
@@ -117,8 +120,89 @@ def tp_metrics(df_tp):
 
         figs[f"TP_counts_comparison_planes"] = fig
 
+    def adc_planes(df_tp):
+
+        bin_x = np.arange(0, 15000, 150)
+        bin_y = np.arange(0, 15000, 150)
+
+        # Loop over planes and elements
+        for pl in ind_plane:
+            for ele in elements:
+                fig = go.Figure()
+                all_valid_data = []
+                col_adc = []
+                ind_adc = []
+
+                # Accumulate data across all triggers
+                for trg in range(1, 40):
+                    df = df_tp[df_tp['trigger'] == trg]
+
+                    col_tp = df[(df.plane == 2) & (df.element == ele)]
+                    ind_tp = df[(df.plane == pl) & (df.element == ele)]
+
+                    col_adc.extend(col_tp['adc_integral'].to_numpy())
+                    ind_adc.extend(ind_tp['adc_integral'].to_numpy())
+
+                # Convert to numpy arrays and ensure same length
+                col_adc = np.array(col_adc)
+                ind_adc = np.array(ind_adc)
+                min_len = min(len(col_adc), len(ind_adc))
+                col_adc = col_adc[:min_len]
+                ind_adc = ind_adc[:min_len]
+
+                if min_len == 0:
+                    continue
+
+                # 2D histogram and log transform
+                H, xedges, yedges = np.histogram2d(col_adc, ind_adc, bins=[bin_x, bin_y])
+                with np.errstate(divide='ignore'):
+                    H_log = np.log10(H)
+                H_masked = ma.masked_where(H == 0, H_log)
+                z = H_masked.filled(np.nan)
+
+                if H_masked.count() > 0:
+                    all_valid_data.append(H_masked.compressed())
+
+                    fig.add_trace(go.Heatmap(
+                        z=z.T,
+                        x=xedges,
+                        y=yedges,
+                        colorscale='Viridis',
+                        coloraxis='coloraxis',
+                        hoverongaps=False
+                    ))
+
+                if all_valid_data:
+                    all_valid_data = np.concatenate(all_valid_data)
+                    global_zmin = all_valid_data.min()
+                    global_zmax = all_valid_data.max()
+                else:
+                    global_zmin = 0
+                    global_zmax = 1
+
+                # Final layout
+                fig.update_layout(
+                    coloraxis=dict(
+                        colorscale='Viridis',
+                        colorbar=dict(title='log₁₀(Density)'),
+                        cmin=global_zmin,
+                        cmax=global_zmax,
+                    ),
+                    width=900,
+                    height=600,
+                    title=f'ADC Correlation: CRP {ele}, {label[pl]} vs Collection',
+                    yaxis_title='Induction ADC',
+                    xaxis_title='Collection ADC',
+                    template='plotly_white',
+                    showlegend=False
+                )
+
+                figs[f"ADC_CRP_{ele}_plane_{pl}"] = fig
+
+
     tp_rate_channel(df_tp)
     tp_count_planes(df_tp)
+    adc_planes(df_tp)
 
     return figs
 
