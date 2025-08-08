@@ -75,7 +75,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerPrimitive):
         map_name = None
-        if op_env=="np04hd":
+        if op_env in ["np04hd", "test"]:
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxTPCChannelMap"
@@ -91,7 +91,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerActivity):
         map_name = None
-        if op_env=="np04hd":
+        if op_env in ["np04hd", "test"]:
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxTPCChannelMap"
@@ -107,7 +107,7 @@ def get_fragment_unpacker(frag_type, det_id, op_env, ana_data_prescale, wvfm_dat
 
     elif(frag_type==daqdataformats.FragmentType.kTriggerCandidate):
         map_name = None
-        if op_env=="np04hd":
+        if op_env in ["np04hd", "test"]:
             map_name="PD2HDTPCChannelMap"
         elif op_env=="np04hdcoldbox":
             map_name="HDColdboxTPCChannelMap"

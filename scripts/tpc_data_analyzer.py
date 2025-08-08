@@ -212,7 +212,6 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
             print(test.get_table(show_last_update=False))
 
     triggers = list(range(1, nrecords + 1, 1))
-    if len(triggers) == 1: triggers = triggers[0]
 
     figs = {}
     print("Plotting RMS")
