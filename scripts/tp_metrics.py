@@ -2,11 +2,7 @@ import hdf5libs
 import dqmtools.dataframe_creator as dfc
 import os
 import plotly.io as pio
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcol
-from pypdf import PdfWriter
 import numpy.ma as ma
-import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
@@ -58,7 +54,7 @@ def tp_metrics(df_tp):
             fig.update_layout(
                 width=1500,
                 height=600,
-                title=f'TP Count per channel: Plane {pl}',
+                title=dict(text=f"Run {df_tp['run'].iloc[0]}: TP Count per channel: Plane {pl}", font=dict(size=24)),
                 xaxis_title='Channel index',
                 yaxis_title='TP counts',
                 template='plotly_white',
@@ -112,7 +108,7 @@ def tp_metrics(df_tp):
         fig.update_layout(
             width=1800,
             height=800,
-            title='Comparison of TP Counts between planes',
+            title=dict(text= f"Run {df_tp['run'].iloc[0]}: Comparison of TP Counts between planes", font=dict(size=24)),
             yaxis_title='Induction TP Count',
             template='plotly_white',
             showlegend=True
@@ -190,7 +186,7 @@ def tp_metrics(df_tp):
                     ),
                     width=900,
                     height=600,
-                    title=f'ADC Correlation: CRP {ele}, {label[pl]} vs Collection',
+                    title=dict(text=f"Run {df_tp['run'].iloc[0]}<br>ADC Correlation: CRP {ele} {label[pl]} vs Collection", font=dict(size=24)),
                     yaxis_title='Induction ADC',
                     xaxis_title='Collection ADC',
                     template='plotly_white',

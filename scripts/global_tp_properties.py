@@ -6,10 +6,7 @@ import click
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 from PIL import Image
-from multiprocessing import Pool
-import time 
 import concurrent.futures
 
 properties = ['Trigger', 'Sequence', 'Src ID', 'Time Start', 'Samples to Peak',
@@ -57,7 +54,7 @@ def clear_tmp_files(files):
             print(f"{file} does not exist.")
     return
 
-def images_to_pdf(figs, name = "tp_properties.pdf", save_dir=","):
+def images_to_pdf(figs, name = "tp_properties.pdf", save_dir="."):
     all_figs = [Image.open(pic) for pic in figs]
     ready_pics = [pic.convert('RGB') for pic in all_figs]
     output_path = os.path.join(save_dir, name)
@@ -113,26 +110,73 @@ def main(filenames, nrecords, nworkers, save_dir):
 
         if prop in tp_prop:
             value, bin_info = custom_prop(df_tp, prop)
-            fig = go.Figure(data=[
-                go.Histogram(
-                    x=value,
-                    xbins=dict(start=bin_info[0], end=bin_info[1], size=bin_info[2])
-                )
-            ])
+
+            hist = go.Histogram(
+                x=value,
+                xbins=dict(start=bin_info[0], end=bin_info[1], size=bin_info[2]),
+                name='Linear',
+                opacity=0.5,
+                yaxis='y1'
+            )
+            hist_log = go.Histogram(
+                x=value,
+                xbins=dict(start=bin_info[0], end=bin_info[1], size=bin_info[2]),
+                name='Log',
+                opacity=0.5,
+                yaxis='y2'
+            )
+
+            fig = go.Figure(data=[hist, hist_log])
+
+            fig.update_layout(
+                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
+                xaxis_title=name,
+                yaxis=dict(
+                    title='Counts (Linear)',
+                    side='left',
+                    type='linear'
+                ),
+                yaxis2=dict(
+                    title='Counts (Log)',
+                    side='right',
+                    overlaying='y',
+                    type='log'
+                ),
+                barmode='overlay',
+                template='plotly_white',
+                legend=dict(x=0.7, y=0.95)
+            )
+
         else:
             value = df_tp[prop].values
             fig = go.Figure(data=[
                 go.Histogram(
                     x=value,
-                    nbinsx=100
+                    nbinsx=100,
+                    name='Linear',
+                    opacity=0.5
                 )
             ])
-            
-        fig.update_layout(
-            title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
-            xaxis_title=name,
-            yaxis_title="Counts"
-        )
+
+            fig.update_layout(
+                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
+                xaxis_title=name,
+                yaxis=dict(
+                    title='Counts (Linear)',
+                    side='left',
+                    type='linear'
+                ),
+                yaxis2=dict(
+                    title='Counts (Log)',
+                    side='right',
+                    overlaying='y',
+                    type='log'
+                ),
+                barmode='overlay',
+                template='plotly_white',
+                legend=dict(x=0.7, y=0.95)
+            )
+
         fig_name = f"TP_properties_run{df_tp['run'].iloc[0]}_{prop}"
         figs[fig_name] = fig
     
