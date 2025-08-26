@@ -137,6 +137,10 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
         df_tmp = df_tmp.reset_index()
         df_all.append(df_tmp)
 
+    if len(df_all)==0: 
+        print(f"No element {ele} (element_id={element_id}) found.")
+        return empty_plot()
+
     df_tmp = pd.concat(df_all,ignore_index=True)
 
     df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
