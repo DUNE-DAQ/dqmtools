@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>NP04 DQM</title>
+    <title>ProtoDUNE DQM</title>
     <script>
         // Refresh the page every 30 seconds
         setInterval(function() {
@@ -157,22 +157,22 @@
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
             <ul class="navbar-nav">
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAPA" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        APA Displays
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownELE" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        APA/CRP Displays
                     </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdownAPA">
-                        {% for apa_no in [1,2,3,4] %}
-                        <a class="dropdown-item" href="{{ url_for('event_display', apa=apa_no) }}">APA {{ apa_no }} Displays</a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdownELE">
+                        {% for ele_no in [1,2,3,4,5] %}
+                        <a class="dropdown-item" href="{{ url_for('event_display', ele=ele_no) }}">APA/CRP {{ ele_no }} Displays</a>
                         {% endfor %}
                     </div>
                 </li>
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownAPAGrid" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        APA Grid Displays
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownELEGrid" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        APA/CRP Grid Displays
                     </a>
-                    <div class="dropdown-menu" aria-labelledby="navbarDropdownAPAGrid">
-                        {% for apa_no in [1,2,3,4] %}
-                        <a class="dropdown-item" href="{{ url_for('event_display_grid', apa=apa_no) }}">APA {{ apa_no }} Grid Display</a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdownELEGrid">
+                        {% for ele_no in [1,2,3,4,5] %}
+                        <a class="dropdown-item" href="{{ url_for('event_display_grid', ele=ele_no) }}">APA/CRP {{ ele_no }} Grid Display</a>
                         {% endfor %}
                     </div>
                 </li>
