@@ -26,6 +26,29 @@ except:
     raise
 
 
+class Workspace(dict):
+    def __init__(self, h5_file, record_id, *arg, **kw):
+        super(Workspace, self).__init__(*arg, **kw)
+
+        self.h5_file = h5_file
+        self.record_id = record_id
+        self.op_env = None
+        self.run_number = None
+
+
+    def load_record(self, MAX_WORKERS=10,ana_data_prescale=1,wvfm_data_prescale=None):
+        with h5py.File(self.h5_file.get_file_name(), 'r') as f:
+            record_index = RecordDataBase(run=f.attrs["run_number"],trigger=self.record_id[0],sequence=self.record_id[1])
+            self.op_env = f.attrs["operational_environment"]
+            self.run_number = f.attrs["run_number"]
+            self.source_geo_id_map = f.attrs['source_id_geo_id_map']
+
+        process_record(self.h5_file, self.record_id, self, MAX_WORKERS=MAX_WORKERS,ana_data_prescale=ana_data_prescale,wvfm_data_prescale=wvfm_data_prescale)
+
+
+    
+
+
 #def CreateDataFrame(dict,nrows,idx_list):
 #    return pd.DataFrame(dict,index=range(nrows)).set_index(idx_list)
 
@@ -150,12 +173,11 @@ def process_source_id(h5_file, sid, record_index, op_env, ana_data_prescale, wvf
 
     return return_dict
 
-def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_data_prescale=None):
-
+def process_record(h5_file,rid, df_dict, MAX_WORKERS=10,ana_data_prescale=1,wvfm_data_prescale=None):
     with h5py.File(h5_file.get_file_name(), 'r') as f:
         record_index = RecordDataBase(run=f.attrs["run_number"],trigger=rid[0],sequence=rid[1])
         op_env = f.attrs["operational_environment"]
-    
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
         future_to_sid = {executor.submit(process_source_id,
                                          h5_file,

@@ -13,7 +13,7 @@ last_mod_time = 0
 images = []
 
 # Regular expression to parse the filenames
-filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
+filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.png")
 
 def get_latest_files(directory):
 
@@ -38,6 +38,7 @@ def get_latest_files(directory):
 
     sorted_keys = sorted(max_images.keys(), key=lambda x: (x[0], x[1]))
     sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
+    print(sorted_images)
     return sorted_images
 
 #<img src="{{ url_for('serve_image', filename=image) }}" alt="{{ image }}" style="max-width: 1200px; max-height: 1200px;"/>

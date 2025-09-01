@@ -104,6 +104,153 @@ def plot_TPCData_by_channel(df_dict,var,det_keys,
     return fig
 
 
+def prep_TPC_adc_map(df_dict,det_keys,ele,plane,
+                     offset=True,
+                     offset_type="median",
+                     orientation="vertical",
+                     color_range=(-256, 256),
+                     run=None,
+                     trigger=None,
+                     seq=None
+        ):
+
+    offset_var = f'adc_{offset_type}'
+    element_id = int(ele[3]) #assuming APAX or CRPX
+
+    #check and filter out to only valid keys
+    det_keys[:] = get_valid_keys(df_dict,det_keys)
+
+    if not det_keys:
+        print("No valid data keys found.")
+        return empty_plot()
+
+    #get all our data
+    df_all = []
+    index=None
+    for det_key in det_keys:
+        df_tmp = df_dict[det_key]
+        df_tmp = df_tmp.loc[(df_tmp["element"]==element_id) & (df_tmp["plane"]==plane)]
+
+        if len(df_tmp)==0: continue
+
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+        if offset:
+            df_tmp = df_tmp.merge(df_dict["detd"+det_key[4:]][offset_var],left_index=True,right_index=True)
+
+        df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+        df_tmp = df_tmp.reset_index()
+        df_all.append(df_tmp)
+
+    if len(df_all)==0: 
+        print(f"No element {ele} (element_id={element_id}) found.")
+        return empty_plot()
+
+    df_tmp = pd.concat(df_all,ignore_index=True)
+
+    df_tmp["timestamps_trg_sub"] = df_tmp.apply(lambda x: x.timestamps.astype(np.int64) - x.trigger_timestamp_dts,axis=1)
+    if offset:
+        df_tmp["adcs"] = df_tmp["adcs"]-df_tmp[offset_var]
+    df_tmp = df_tmp.sort_values("channel")
+
+    #fill in missing time values with np.nan
+    all_time_ticks = sorted(set().union(*df_tmp["timestamps_trg_sub"]))
+    common_time = np.array(all_time_ticks)
+
+    def map_to_common_time(timestamps, adcs, common_time):
+        time_to_adc = dict(zip(timestamps, adcs))
+        return np.array([time_to_adc.get(t, np.nan) for t in common_time])
+
+    df_tmp["adcs_full"] = df_tmp.apply(
+        lambda row: map_to_common_time(row["timestamps_trg_sub"], row["adcs"], common_time),
+        axis=1
+    )
+
+    #now fill in missing channels with np.nan
+    expected_channels = np.arange(df_tmp["channel"].min(),df_tmp["channel"].max()+1)
+    df_tmp_indexed = df_tmp.set_index("channel")
+    df_reindexed = df_tmp_indexed.reindex(expected_channels)
+
+    max_adc_len = df_tmp["adcs_full"].apply(len).max()
+    df_reindexed["adcs_full"] = df_reindexed["adcs_full"].apply(
+        lambda x: x if isinstance(x, np.ndarray) else np.full(max_adc_len, np.nan)
+    )
+
+    df_reindexed["channel"] = df_reindexed.index
+
+    df_tmp = df_reindexed
+
+    if orientation=="horizontal":
+        xdata = df_tmp.iloc[0]["timestamps_trg_sub"]
+        ydata = df_tmp["channel"].values
+        zdata = np.vstack(df_tmp["adcs_full"].values)
+        yaxis_title='Offline Channel'
+        xaxis_title='DTS time ticks (16ns)'
+    else:
+        ydata = df_tmp.iloc[0]["timestamps_trg_sub"]
+        xdata = df_tmp["channel"].values
+        zdata = np.vstack(df_tmp["adcs_full"].values).T
+        xaxis_title='Offline Channel'
+        yaxis_title='DTS time ticks (16ns)'
+
+    zmin, zmax = color_range
+
+    xmin = np.min(xdata)
+    xmax = np.max(xdata)
+    ymin = np.min(ydata)
+    ymax = np.max(ydata)
+
+
+    return {
+        'x': (xdata, xmin, xmax),
+        'y': (ydata, ymin, ymax),
+        'z': (zdata, zmin, zmax),
+    }
+
+
+def plot_TPC_adc_map_mpl(df_dict,det_keys,ele,plane,
+                     offset=True,offset_type="median",
+                     make_static=False,make_tp_overlay=False,
+                     orientation="vertical",colorscale='plasma',color_range=(-256,256),
+                     run=None,trigger=None,seq=None, figsize=(12,8)):
+
+
+    
+    plot_data = prep_TPC_adc_map(df_dict,det_keys,ele,plane,
+                     offset=offset,
+                     offset_type=offset_type,
+                     orientation=orientation,
+                     color_range=color_range,
+                     run=run,
+                     trigger=trigger,
+                     seq=seq
+        )
+
+    xdata, xmin, xmax = plot_data['x']
+    ydata, ymin, ymax = plot_data['y']
+    zdata, zmin, zmax = plot_data['z']
+
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+    vmin, vmax = color_range
+    fig, ax = plt.subplots(1,1, figsize=figsize)
+    img = ax.imshow(zdata, cmap=colorscale, aspect='auto', vmin=vmin, vmax=vmax, origin='lower', extent=[xmin-0.5, xmax+0.5, ymin-8, ymax+8])
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+    cbar = fig.colorbar(img, cax=cax)
+    
+    ax.set_xlabel("Offline Channel", fontsize=18)
+    ax.set_ylabel("DTS time ticks (1ns)", fontsize=18)
+
+    for label in (ax.get_xticklabels() + ax.get_yticklabels() + cbar.ax.get_yticklabels()):
+        # label.set_fontproperties(font_prop)
+        label.set_fontsize(14) # Size here overrides font_prop
+        
+    return fig
+
+
 def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
                      offset=True,offset_type="median",
                      make_static=False,make_tp_overlay=False,
@@ -190,6 +337,9 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
 
     zmin, zmax = color_range
 
+
+
+    # Add MPL option?
     if make_static:
 
         xmin = np.min(xdata)

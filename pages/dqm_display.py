@@ -60,13 +60,13 @@ def get_latest_WIBTests_files(directory):
 def get_latest_EventDisplay_files(directory,select_element=None,select_plane=None):
     
     # Regular expression to parse the filenames
-    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
+    # filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.png")
     filename_regex = re.compile(
         r"""^EventDisplay_run(?P<run>\d+)
             _trigger(?P<trigger>\d+)
             _seq\d+
             _(?P<element_type>APA|CRP)(?P<element_id>\d+)?     # APA<digits> or CRP[digits optional]
-            _plane(?P<plane>\d+)\.svg$""",
+            _plane(?P<plane>\d+)\.png$""",
         re.X
     )
 
@@ -143,7 +143,8 @@ def pds():
 
 @app.route('/images/<subdir>/<path:filename>')
 def serve_image(subdir,filename):
-    return send_from_directory(IMAGE_DIRECTORY+"/"+subdir, filename)
+    print(IMAGE_DIRECTORY+subdir, filename)
+    return send_from_directory(IMAGE_DIRECTORY+subdir, filename)
 
 import click
 @click.command()
