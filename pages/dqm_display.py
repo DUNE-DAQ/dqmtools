@@ -137,6 +137,7 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
 
     sorted_keys = sorted(max_files.keys(), key=lambda x: (x[0], x[1]))
     sorted_images = [ max_files[key] for key in sorted_keys ]
+    print(sorted_images)
 
     return sorted_images
 
