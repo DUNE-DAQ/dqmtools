@@ -123,6 +123,8 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
 
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
     filtered_files = filter_EventDisplay_files(directory, select_element, select_plane)
+    
+    print(filtered_files)
     # Now we get file for the max run/trigger for each element/plane
 
     # Firstly split filtered files by element/plane
