@@ -120,7 +120,7 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
     return { k:v for k,v in event_file_dict.items() if search(k) }
         
 
-def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None)
+def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
     filtered_files = filter_EventDisplay_files(directory, select_element, select_plane)
     # Now we get file for the max run/trigger for each element/plane
 
