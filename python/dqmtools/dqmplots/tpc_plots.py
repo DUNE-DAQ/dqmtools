@@ -211,8 +211,15 @@ def plot_TPC_adc_map_mpl(df_dict,det_keys,ele,plane,
                      offset=True,offset_type="median",
                      make_static=False,make_tp_overlay=False,
                      orientation="vertical",colorscale='plasma',color_range=(-256,256),
-                     run=None,trigger=None,seq=None, figsize=(12,8)):
+                     run=None,trigger=None,seq=None, figsize=(12,8), title=None):
 
+
+    import matplotlib.font_manager as fm
+    import os.path
+    # Load your custom font
+    # font_path = os.path.expandvars('$DQMTOOLS_SHARE/config/fonts/OpenSans-VariableFont_wdth,wght.ttf')
+    font_path = os.path.expandvars('$DQMTOOLS_SHARE/config/fonts/OpenSans-VariableFont_wdth,wght.ttf', )
+    custom_font = fm.FontProperties(fname=font_path)
 
     
     plot_data = prep_TPC_adc_map(df_dict,det_keys,ele,plane,
@@ -241,13 +248,17 @@ def plot_TPC_adc_map_mpl(df_dict,det_keys,ele,plane,
     cax = divider.append_axes("right", size="5%", pad=0.05)
     cbar = fig.colorbar(img, cax=cax)
     
-    ax.set_xlabel("Offline Channel", fontsize=18)
-    ax.set_ylabel("DTS time ticks (1ns)", fontsize=18)
+    ax.set_xlabel("Offline Channel", fontsize=18, fontproperties=custom_font)
+    ax.set_ylabel("DTS time ticks (1ns)", fontsize=18, fontproperties=custom_font)
 
     for label in (ax.get_xticklabels() + ax.get_yticklabels() + cbar.ax.get_yticklabels()):
         # label.set_fontproperties(font_prop)
         label.set_fontsize(14) # Size here overrides font_prop
-        
+        label.set_fontproperties(custom_font)
+
+
+    fig.suptitle(title, ha='left', x=0.1, size=20, fontproperties=custom_font) 
+
     return fig
 
 

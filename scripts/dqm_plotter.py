@@ -21,13 +21,15 @@ from rich import print
 
 
 import click
+
+
 @click.command()
 @click.argument('input_data', type=click.Path(exists=True))
 @click.argument('output_dir', type=click.Path(exists=True))
 @click.option('--nworkers', default=10, help='How many thread workers to launch (default: 12)')
 @click.option('--nskip', default=0, help='How many trigger records to skip at start of file')
 @click.option('--nrecords', default=1, help='How man trigger records to plot')
-@click.option('--imgtype', default='svg', help='Type of image to write')
+@click.option('--imgtype', default='png', help='Type of image to write')
 @click.option('--component',default=None, help='specific component to plot')
 @click.option('--plane',default=None, help='specific plane to plot')
 #@click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
@@ -128,7 +130,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         print(f"Elapsed time {df_prep_elapsed_time}")
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
-            # myplanes = myplanes[2:3]
+            myplanes = myplanes[2:3]
             future_p = {
                 executor.submit(make_adc_map_fig, p[0],p[1], df_dict, det_keys, offset, index, imgtype, trigger_types_str, trigger_timestamp_cern, output_dir): p for p in myplanes
             }
@@ -144,7 +146,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
 
 def make_adc_map_fig(element, plane, df_dict, det_keys, offset, index, imgtype, trigger_types_str, trigger_timestamp_cern, output_dir):
     print(f"Image {element} plane {plane} processing started...")
-
+    title = f"Run {int(index[0])}, Trigger {int(index[1])}, {element} Plane {plane}"+"\n"+f"Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)"
     fig = plot_TPC_adc_map_mpl(df_dict=df_dict, det_keys=det_keys,
                         plane=plane, ele=element,
                         make_static=True,
@@ -157,9 +159,9 @@ def make_adc_map_fig(element, plane, df_dict, det_keys, offset, index, imgtype, 
                         trigger=index[1],
                         seq=index[2],
                         figsize=(12,8),
+                        title = title
                         )
     print(f"Figure for Element {element} plane {plane} processed...")
-    fig.suptitle(f"Run {int(index[0])}, Trigger {int(index[1])}, {element} Plane {plane}"+"\n"+f"Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)", ha='left', x=0.1, size=20) 
     img_file_name = f"EventDisplay_run{int(index[0])}_trigger{int(index[1])}_seq{int(index[2])}_{element}_plane{plane}.{imgtype}"
     fig.tight_layout()
     fig.savefig(output_dir+'/'+img_file_name)
