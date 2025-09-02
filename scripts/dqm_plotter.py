@@ -21,7 +21,7 @@ import click
 @click.option('--imgtype', default='svg', help='Type of image to write')
 @click.option('--element',default=None, help='specific element to plot')
 @click.option('--plane',default=None, help='specific plane to plot')
-@click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
+#@click.option('--hd/--vd', default=True, help='Whether we are running HD (or VD) (default: "HD")')
 
 def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, plane):
 
@@ -64,50 +64,37 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         pd.set_option('display.max_columns', None)
         print(df_dict["trh"])
 
-<<<<<<< HEAD
-=======
-        if(hd):
-            tpc_det_key="detd_kHD_TPC_kWIBEth"
-        else:
-            tpc_det_key="detd_kVD_BottomTPC_kWIBEth"
->>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
+        index = df_dict["trh"].index[0]
+
+        det_keys = [ key for key in df_dict if key.startswith('detw') and 'TPC' in key ]
+
+        hd = any("kHD" in k for k in det_keys) #else, vd
+        
         offset=True
         
         if plane is not None:
             planes = [ int(plane) ]
         else:
             planes = [0, 1, 2]
-            
-<<<<<<< HEAD
-        if element is not None:
-            elements = [ int(element) ]
-        else:
-            elements = default_elements
 
-        myplanes = []
-        for ele in elements:
-            for plane in planes:
-                myplanes.append((ele,plane))
-=======
+        element_ids = []
         if component is not None:
-            elements = [ int(component) ]
+            element_ids = [ int(component) ]
         else:
             if(hd):
-                elements = [1,2,3,4]
+                element_ids = [1,2,3,4]
             else:
-                elements = [4,5]
+                element_ids = [2,3,4,5]
 
+        element_type="APA" if hd else "CRP"
+
+        elements = [ f'{element_type}{i}' for i in element_ids ]
+                
         myplanes = []
         for el in elements:
             for plane in planes:
                 myplanes.append((el,plane))
 
-        #planes = []
-        #for apa in ["APA2"]:
-        #    for plane in [0,1,2]:
-        #        planes.append((apa,plane))
->>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
-        
         df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
         df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
         trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
@@ -118,30 +105,22 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
             trigger_types_str = trigger_types_str + trigtype.name[1:] + ","
         trigger_types_str=trigger_types_str[:-1]+")"
         
-        if tpc_det_key not in df_dict.keys():
-            print("No tpc det waveforms in file.")
-            return None
-        
-        def make_adc_map_fig(ele,plane):
-            df_tmp, index = dfc.select_record(df_dict[tpc_det_key])
-            df_tmp= df_tmp.reset_index()
-            if(len(df_tmp)==0):
-                return "NO-DATA-FOUND"
-            fig = plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
-                                      offset=True,make_static=True,make_tp_overlay=False,
-                                      orientation="vertical",colorscale='plasma',color_range=(-256,256))
-<<<<<<< HEAD
-            print(f"Figure for {ele} plane {plane} processed...")
-            fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, Element {ele} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
-            fig_name = f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_Element{ele}_plane{plane}.{imgtype}"
-            fig.write_image(f"{output_dir}/{fig_name}", scale=3)
-            return fig_name
-
-=======
-            print(f"Figure for Element {apa} plane {plane} processed...")
-            fig.update_layout(title=dict(text=f"Run {index.run}, Trigger {index.trigger}, {apa} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
-            fig.write_image(f"{output_dir}/EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}", scale=3)
-            return f"EventDisplay_run{index.run}_trigger{index.trigger}_seq{index.sequence}_{apa}_plane{plane}.{imgtype}"
+        def make_adc_map_fig(element,plane):
+            fig = plot_TPC_adc_map(df_dict=df_dict, det_keys=det_keys,
+                                   plane=plane, ele=element,
+                                   make_static=True,
+                                   offset=offset,
+                                   make_tp_overlay=False,
+                                   orientation='vertical',
+                                   colorscale='plasma',
+                                   color_range=(-256,256),
+                                   run=index[0],
+                                   trigger=index[1],
+                                   seq=index[2])
+            print(f"Figure for Element {element} plane {plane} processed...")
+            fig.update_layout(title=dict(text=f"Run {int(index[0])}, Trigger {int(index[1])}, {element} Plane {plane}<br><sup>Trigger Type {trigger_types_str}, {trigger_timestamp_cern} (CERN)</sup>", font=dict(size=24) ) )
+            fig.write_image(f"{output_dir}/EventDisplay_run{int(index[0])}_trigger{int(index[1])}_seq{int(index[2])}_{element}_plane{plane}.{imgtype}", scale=3)
+            return f"EventDisplay_run{int(index[0])}_trigger{int(index[1])}_seq{int(index[2])}_{element}_plane{plane}.{imgtype}"
         
 >>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
         with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:

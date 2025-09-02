@@ -60,7 +60,15 @@ def get_latest_WIBTests_files(directory):
 def get_latest_EventDisplay_files(directory,select_element=None,select_plane=None):
     
     # Regular expression to parse the filenames
-    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_Element(\d+)_plane(\d+)\.svg")
+    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
+    filename_regex = re.compile(
+        r"""^EventDisplay_run(?P<run>\d+)
+            _trigger(?P<trigger>\d+)
+            _seq\d+
+            _(?P<element_type>APA|CRP)(?P<element_id>\d+)?     # APA<digits> or CRP[digits optional]
+            _plane(?P<plane>\d+)\.svg$""",
+        re.X
+    )
 
     #print(directory)
     
@@ -69,14 +77,15 @@ def get_latest_EventDisplay_files(directory,select_element=None,select_plane=Non
     for filename in os.listdir(directory):
         match = filename_regex.match(filename)
         if match:
-            run = int(match.group(1))
-            trigger = int(match.group(2))
-            element = int(match.group(3))
-            plane = int(match.group(4))
+            run = int(match['run'])
+            trigger = int(match['trigger'])
+            element_type = match['element_type']
+            element_id = int(match['element_id'])
+            plane = int(match['plane'])
 
             if select_element is not None:
                 select_element = int(select_element)
-                if element!=select_element:
+                if element_id!=select_element:
                     continue
 
             if select_plane is not None:
@@ -85,7 +94,7 @@ def get_latest_EventDisplay_files(directory,select_element=None,select_plane=Non
                     continue
             
             # Check if this run and trigger number is larger than the current stored values
-            key = (element, plane)
+            key = (element_id, plane)
             if (run > max_images[key]['run']) or (run == max_images[key]['run'] and trigger > max_images[key]['trigger']):
                 max_images[key]['run'] = run
                 max_images[key]['trigger'] = trigger
@@ -102,16 +111,19 @@ def index():
     return render_template('index.html')
 
 @app.route('/event_display/')
-@app.route('/event_display/element<element>')
-@app.route('/event_display/element<element>_plane<plane>')
-def event_display(element=None, plane=None):
-    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_element=element, select_plane=plane)
-    return render_template('event_display.html', images=evd_images, element=element, plane=plane)
+@app.route('/event_display/apa<ele>')
+@app.route('/event_display/apa<ele>_plane<plane>')
+@app.route('/event_display/crp<ele>')
+@app.route('/event_display/crp<ele>_plane<plane>')
+def event_display(ele=None, plane=None):
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_element=ele, select_plane=plane)
+    return render_template('event_display.html', images=evd_images, ele=ele, plane=plane)
 
-@app.route('/event_display_grid/element<element>')
-def event_display_grid(element=None):
-    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_element=element)
-    return render_template('event_display_grid.html', images=evd_images, element=element)
+@app.route('/event_display_grid/apa<ele>')
+@app.route('/event_display_grid/crp<ele>')
+def event_display_grid(ele=None):
+    evd_images = get_latest_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays", select_element=ele)
+    return render_template('event_display_grid.html', images=evd_images, ele=ele)
 
 @app.route('/event_display_plane/plane<plane>')
 def event_display_plane(plane=None):
