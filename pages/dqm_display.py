@@ -2,6 +2,8 @@ from flask import Flask, send_from_directory, render_template_string, render_tem
 import re
 import os
 from collections import defaultdict
+from cachetools import cached, TTLCache
+from enum import Enum
 
 app = Flask(__name__)
 
@@ -10,6 +12,12 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 
 # Store the last modification time
 last_mod_time = 0
+
+class EventDisplayIndex(Enum):
+    RUN = 1
+    TRIGGER = 2
+    ELEMENT = 3
+    PLANE = 4
 
 def get_latest_pds_plots(directory):
 
@@ -57,9 +65,15 @@ def get_latest_WIBTests_files(directory):
     return [ max_image ]
 
 
-def get_latest_EventDisplay_files(directory,select_element=None,select_plane=None):
+@cached(cache=TTLCache(maxsize=1024, ttl=300))
+def gather_EventDisplay_files(directory):
     
-    # Regular expression to parse the filenames
+    
+    # We want a dict of form 
+    # {run->trigger->disp
+    # }
+    
+    # Regex parse ... for now
     filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
     filename_regex = re.compile(
         r"""^EventDisplay_run(?P<run>\d+)
@@ -70,40 +84,64 @@ def get_latest_EventDisplay_files(directory,select_element=None,select_plane=Non
         re.X
     )
 
-    #print(directory)
-    
-    max_images = defaultdict(lambda: {'run': -1, 'trigger': -1, 'filename': ''})
-        
+    return_dict = {}
+
     for filename in os.listdir(directory):
         match = filename_regex.match(filename)
-        if match:
-            run = int(match['run'])
-            trigger = int(match['trigger'])
-            element_type = match['element_type']
-            element_id = int(match['element_id'])
-            plane = int(match['plane'])
-
-            if select_element is not None:
-                select_element = int(select_element)
-                if element_id!=select_element:
-                    continue
-
-            if select_plane is not None:
-                select_plane = int(select_plane)
-                if plane!=select_plane:
-                    continue
-            
-            # Check if this run and trigger number is larger than the current stored values
-            key = (element_id, plane)
-            if (run > max_images[key]['run']) or (run == max_images[key]['run'] and trigger > max_images[key]['trigger']):
-                max_images[key]['run'] = run
-                max_images[key]['trigger'] = trigger
-                max_images[key]['filename'] = filename
-
-    sorted_keys = sorted(max_images.keys(), key=lambda x: (x[0], x[1]))
-    sorted_images = [ max_images[key]['filename'] for key in sorted_keys ]
-    return sorted_images
+        if not match:
+            continue
         
+        # Get the information about the run
+        run = int(match['run'])
+        trigger = int(match['trigger'])
+        element_id = int(match['element_id'])
+        plane = int(match['plane'])
+        
+        return_dict[(run, trigger, element_id, plane)] = filename
+
+    return return_dict
+
+
+def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, select_element=None, select_plane=None):
+    
+    event_file_dict = gather_EventDisplay_files(directory)
+    
+    search = lambda x: True
+    
+    if select_run is not None:
+        search = lambda x: x[EventDisplayIndex.RUN]==int(select_run)
+    if select_trigger is not None:
+        search = lambda x: search(x) and (x[EventDisplayIndex.TRIGGER]==int(select_trigger))
+    if select_element is not None:
+        search = lambda x: search(x) and (x[EventDisplayIndex.ELEMENT]==int(select_element))
+    if select_plane is not None:
+        search = lambda x: search(x) and (x[EventDisplayIndex.PLANE]==int(select_plane))
+
+    return { k:v for k,v in event_file_dict.items() if search(k) }
+        
+
+def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None)
+    filtered_files = filter_EventDisplay_files(directory, select_element, select_plane)
+    # Now we get file for the max run/trigger for each element/plane
+
+    # Firstly split filtered files by element/plane
+    element_plane_dict = {}
+    for key, value in filtered_files.items():
+        element_plane_key = (key[EventDisplayIndex.ELEMENT], key[EventDisplayIndex.PLANE])
+        if element_plane_key not in element_plane_dict:
+            element_plane_dict[element_plane_key] = {}
+        element_plane_dict[element_plane_key][key] = value
+
+    # Now get the max run/trigger for each element/plane
+    max_files = {}
+    for (element, plane), files in element_plane_dict.items():
+        max_run = max(key[EventDisplayIndex.RUN] for key in files.keys())
+        max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
+        max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
+
+    return max_files
+
+
 @app.route('/')
 @app.route('/index')
 @app.route('/home')
