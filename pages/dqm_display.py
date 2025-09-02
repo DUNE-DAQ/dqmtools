@@ -134,9 +134,11 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
         max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
         max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
 
-    print(max_files)
 
-    return max_files
+    sorted_keys = sorted(max_files.keys(), key=lambda x: (x[0], x[1]))
+    sorted_images = [ max_files[key] for key in sorted_keys ]
+
+    return sorted_images
 
 
 @app.route('/')
