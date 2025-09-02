@@ -100,10 +100,8 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
     
     event_file_dict = gather_EventDisplay_files(directory)
     print(event_file_dict)
-    
-    search = lambda x: True
-    
-    search_list = [lambda x: True]
+        
+    search_list = [lambda _: True]
     
     if select_run is not None:
         search_list.append(lambda x: x[EventDisplayIndex.RUN.value]==int(select_run))
