@@ -109,13 +109,13 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
     search = lambda x: True
     
     if select_run is not None:
-        search = lambda x: x[EventDisplayIndex.RUN]==int(select_run)
+        search = lambda x: x[EventDisplayIndex.RUN.value]==int(select_run)
     if select_trigger is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.TRIGGER]==int(select_trigger))
+        search = lambda x: search(x) and (x[EventDisplayIndex.TRIGGER.value]==int(select_trigger))
     if select_element is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.ELEMENT]==int(select_element))
+        search = lambda x: search(x) and (x[EventDisplayIndex.ELEMENT.value]==int(select_element))
     if select_plane is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.PLANE]==int(select_plane))
+        search = lambda x: search(x) and (x[EventDisplayIndex.PLANE.value]==int(select_plane))
 
     return { k:v for k,v in event_file_dict.items() if search(k) }
         
