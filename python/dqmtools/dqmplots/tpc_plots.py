@@ -262,17 +262,24 @@ def plot_TPC_adc_map_mpl(df_dict,det_keys,ele,plane,
     return fig
 
 
-def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
-                     offset=True,offset_type="median",
-                     make_static=False,make_tp_overlay=False,
-                     orientation="vertical",colorscale='plasma',color_range=(-256,256),
+def plot_TPC_adc_map(df_dict,
+                     det_keys,
+                     ele,
+                     plane,
+                     offset=True,
+                     offset_type="median",
+                     make_static=False,
+                     make_tp_overlay=False,
+                     orientation="vertical",
+                     colorscale='plasma',
+                     color_range=(-256,256),
                      run=None,trigger=None,seq=None):
 
     offset_var = f'adc_{offset_type}'
     element_id = int(ele[3]) #assuming APAX or CRPX
 
     #check and filter out to only valid keys
-    det_keys[:] = get_valid_keys(df_dict,det_keys)
+    det_keys[:] = get_valid_keys(df_dict, det_keys)
 
     if not det_keys:
         print("No valid data keys found.")
@@ -283,7 +290,7 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
     index=None
     for det_key in det_keys:
         df_tmp = df_dict[det_key]
-        df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
+        df_tmp = df_tmp.loc[(df_tmp["element"]==element_id) & (df_tmp["plane"]==plane)]
 
         if len(df_tmp)==0: continue
 
