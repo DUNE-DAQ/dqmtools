@@ -14,28 +14,8 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 last_mod_time = 0
 
 def get_latest_pds_plots(directory):
-
-    max_images = defaultdict(lambda: {'run': -1, 'trigger': -1, 'filename': ''})
     filename_regex = re.compile(r"run(\d+)_(\d+)_([^_]+)\.svg")
-    
-    for filename in os.listdir(directory):
-
-        match = filename_regex.match(filename)
-        if match:
-            run = int(match.group(1))
-            run_id = int(match.group(2))
-            key = str(match.group(3))
-
-            if (run > max_images[key]['run']) or (run == max_images[key]['run'] and run_id > max_images[key]['trigger']):
-                max_images[key]['run'] = run
-                max_images[key]['trigger'] = run_id
-                max_images[key]['filename'] = filename
-
-    
-    sorted_keys = list(max_images.keys())
-    sorted_keys.sort()
-    images = [ max_images[key]['filename'] for key in sorted_keys ]    
-    return images
+    return filter_EventDisplay_files(directory, filename_regex)
 
 
 def get_latest_WIBTests_files(directory):
@@ -59,21 +39,9 @@ def get_latest_WIBTests_files(directory):
     return [ max_image ]
 
 
-def gather_EventDisplay_files(directory):
+def gather_EventDisplay_files(directory, filename_regex):
         
     # Regex parse ... for now
-    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
-    filename_regex = re.compile(
-        r"""^EventDisplay_run(?P<run>\d+)
-            _trigger(?P<trigger>\d+)
-            _seq\d+
-            _(?P<element_type>APA|CRP)(?P<element_id>\d+)?     # APA<digits> or CRP[digits optional]
-            _plane(?P<plane>\d+)\.svg$""",
-        re.X
-    )
-
-    return_dict = {}
-
     runs = []
     triggers = []
     elements = []
@@ -99,12 +67,12 @@ def gather_EventDisplay_files(directory):
     return return_df
 
 
-def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, select_element=None, select_plane=None):
+def filter_EventDisplay_files(directory, filename_regex, select_run=None, select_trigger=None, select_element=None, select_plane=None):
     '''
     Filter out unwanted entries
     '''
     
-    event_file_df = gather_EventDisplay_files(directory)
+    event_file_df = gather_EventDisplay_files(directory, filename_regex)
     
     if select_run is not None:
         event_file_df = event_file_df[event_file_df['run']==int(select_run)]
@@ -119,9 +87,19 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
         
 
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
-    filtered_df = filter_EventDisplay_files(directory, select_element=select_element, select_plane=select_plane)
-    # Now we get file for the max run/trigger for each element/plane
+    filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
+    filename_regex = re.compile(
+        r"""^EventDisplay_run(?P<run>\d+)
+            _trigger(?P<trigger>\d+)
+            _seq\d+
+            _(?P<element_type>APA|CRP)(?P<element_id>\d+)?     # APA<digits> or CRP[digits optional]
+            _plane(?P<plane>\d+)\.svg$""",
+        re.X
+    )
 
+    
+    filtered_df = filter_EventDisplay_files(directory, filename_regex, select_element=select_element, select_plane=select_plane)
+    # Now we get file for the max run/trigger for each element/plane
     
     max_for_el_plane = (filtered_df.sort_values(['run', 'trigger'], ascending=[False, False])
           .drop_duplicates(['element_id', 'plane'], keep='first')).sort_values(['element_id','plane'])
