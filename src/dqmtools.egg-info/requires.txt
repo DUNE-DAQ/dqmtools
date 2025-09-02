@@ -1,8 +1,0 @@
-flask
-kaleido
-numpy
-pandas
-plotly
-tables
-tabulate
-tqdm
