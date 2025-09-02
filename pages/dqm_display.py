@@ -103,16 +103,18 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
     
     search = lambda x: True
     
+    search_list = [lambda x: True]
+    
     if select_run is not None:
-        search = lambda x: x[EventDisplayIndex.RUN.value]==int(select_run)
+        search_list.append(lambda x: x[EventDisplayIndex.RUN.value]==int(select_run))
     if select_trigger is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.TRIGGER.value]==int(select_trigger))
+        search_list.append(lambda x: x[EventDisplayIndex.TRIGGER.value]==int(select_trigger))
     if select_element is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.ELEMENT.value]==int(select_element))
+        search_list.append(lambda x: x[EventDisplayIndex.ELEMENT.value]==int(select_element))
     if select_plane is not None:
-        search = lambda x: search(x) and (x[EventDisplayIndex.PLANE.value]==int(select_plane))
+        search_list.append(lambda x: x[EventDisplayIndex.PLANE.value]==int(select_plane))
 
-    return { k:v for k,v in event_file_dict.items() if search(k) }
+    return { k:v for k,v in event_file_dict.items() if all(s(k) for s in search_list) }
         
 
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
