@@ -41,6 +41,8 @@ def get_latest_pds_plots(directory):
     sorted_keys = list(max_images.keys())
     sorted_keys.sort()
     images = [ max_images[key]['filename'] for key in sorted_keys ]
+    raise Exception(images)
+    
     return images
 
 
@@ -63,6 +65,7 @@ def get_latest_WIBTests_files(directory):
                 max_image = filename
                 
     return [ max_image ]
+
 
 
 @cached(cache=TTLCache(maxsize=1024, ttl=300))
