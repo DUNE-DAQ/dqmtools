@@ -130,7 +130,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         print(f"Elapsed time {df_prep_elapsed_time}")
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
-            myplanes = myplanes[2:3]
+            # myplanes = myplanes[2:3]
             future_p = {
                 executor.submit(make_adc_map_fig, p[0],p[1], df_dict, det_keys, offset, index, imgtype, trigger_types_str, trigger_timestamp_cern, output_dir): p for p in myplanes
             }
