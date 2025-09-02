@@ -65,15 +65,8 @@ def get_latest_WIBTests_files(directory):
     return [ max_image ]
 
 
-
-@cached(cache=TTLCache(maxsize=1024, ttl=300))
 def gather_EventDisplay_files(directory):
-    
-    
-    # We want a dict of form 
-    # {run->trigger->disp
-    # }
-    
+        
     # Regex parse ... for now
     filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
     filename_regex = re.compile(
