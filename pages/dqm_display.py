@@ -40,9 +40,7 @@ def get_latest_pds_plots(directory):
     
     sorted_keys = list(max_images.keys())
     sorted_keys.sort()
-    images = [ max_images[key]['filename'] for key in sorted_keys ]
-    raise Exception(images)
-    
+    images = [ max_images[key]['filename'] for key in sorted_keys ]    
     return images
 
 
@@ -141,6 +139,8 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
         max_run = max(key[EventDisplayIndex.RUN] for key in files.keys())
         max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
         max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
+    
+    raise Exception(max_files)
 
     return max_files
 
