@@ -24,7 +24,7 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
     #setup our tests
     dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
     dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
-    dqm_test_suite_wibs.register_test(CheckNFrames_WIBEth())
+    dqm_test_suite_wibs.register_test(CheckNFrames_TPC())
     
     if(hd):
         tpc_det_name = "HD_TPC"
@@ -69,11 +69,11 @@ def main(filenames, nrecords, nworkers, hd, warm, pds, wibpulser, make_plots):
     dqm_test_suite_wibs.register_test(CheckRequestTimes_WIBEth(tpc_det_name))
 
     if(not wibpulser):
-        dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckRMS_TPC(det_name=tpc_det_name,threshold=tpc_rms_high_threshold,verbose=True),
                                          name=f"CheckRMS_{tpc_det_name}_High")
-        dqm_test_suite_wibs.register_test(CheckRMS_WIBEth(det_name=tpc_det_name,threshold=tpc_rms_low_threshold,operator=operator.lt,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckRMS_TPC(det_name=tpc_det_name,threshold=tpc_rms_low_threshold,operator=operator.lt,verbose=True),
                                          name=f"CheckRMS_{tpc_det_name}_Low")
-        dqm_test_suite_wibs.register_test(CheckPedestal_WIBEth(det_name=tpc_det_name,verbose=True),
+        dqm_test_suite_wibs.register_test(CheckPedestal_TPC(det_name=tpc_det_name,verbose=True),
                                          name=f"CheckPedestal_{tpc_det_name}")
 
     dqm_test_suite = DQMTestSuite("All Tests")

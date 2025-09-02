@@ -38,7 +38,7 @@ def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
     #setup our tests
     dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
     dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
-    dqm_test_suite_wibs.register_test(CheckNFrames_WIBEth())
+    dqm_test_suite_wibs.register_test(CheckNFrames_TPC())
     
     if(hd):
         tpc_det_name = "HD_TPC"
