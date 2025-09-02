@@ -14,10 +14,10 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 last_mod_time = 0
 
 class EventDisplayIndex(IntEnum):
-    RUN = 1
-    TRIGGER = 2
-    ELEMENT = 3
-    PLANE = 4
+    RUN = 0
+    TRIGGER = 1
+    ELEMENT = 2
+    PLANE = 3
 
 def get_latest_pds_plots(directory):
 
