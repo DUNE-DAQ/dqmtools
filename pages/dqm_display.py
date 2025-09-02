@@ -3,7 +3,7 @@ import re
 import os
 from collections import defaultdict
 from cachetools import cached, TTLCache
-from enum import IntEnum
+import pandas as pd
 
 app = Flask(__name__)
 
@@ -12,12 +12,6 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 
 # Store the last modification time
 last_mod_time = 0
-
-class EventDisplayIndex(IntEnum):
-    RUN = 0
-    TRIGGER = 1
-    ELEMENT = 2
-    PLANE = 3
 
 def get_latest_pds_plots(directory):
 
@@ -80,69 +74,60 @@ def gather_EventDisplay_files(directory):
 
     return_dict = {}
 
+    runs = []
+    triggers = []
+    elements = []
+    planes = []
+    filenames = []
     for filename in os.listdir(directory):
         match = filename_regex.match(filename)
         if not match:
             continue
-        
-        # Get the information about the run
-        run = int(match['run'])
-        trigger = int(match['trigger'])
-        element_id = int(match['element_id'])
-        plane = int(match['plane'])
-        
-        return_dict[(run, trigger, element_id, plane)] = filename
 
-    return return_dict
+        # Get the information about the run
+        runs.append(int(match['run']))
+        triggers.append(int(match['trigger']))
+        elements.append(int(match['element_id']))
+        planes.append(int(match['plane']))
+        filenames.append(filename)
+    
+    return_df = pd.DataFrame.from_dict({'run': runs,
+                              'trigger': triggers,
+                              'element_id': elements,
+                              'plane': planes,
+                              'filename': filename})
+    return return_df
 
 
 def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, select_element=None, select_plane=None):
+    '''
+    Filter out unwanted entries
+    '''
     
-    event_file_dict = gather_EventDisplay_files(directory)
-
-    if select_run is None and select_trigger is None and select_element is None and select_plane is None:
-        return event_file_dict
-
-
-    search_list = []    
+    event_file_df = gather_EventDisplay_files(directory)
+    
     if select_run is not None:
-        search_list.append(lambda x: x[EventDisplayIndex.RUN.value]==int(select_run))
+        event_file_df = event_file_df[event_file_df['run']==int(select_run)]
     if select_trigger is not None:
-        search_list.append(lambda x: x[EventDisplayIndex.TRIGGER.value]==int(select_trigger))
+        event_file_df = event_file_df[event_file_df['trigger']==int(select_trigger)]
     if select_element is not None:
-        search_list.append(lambda x: x[EventDisplayIndex.ELEMENT.value]==int(select_element))
+        event_file_df = event_file_df[event_file_df['element_id']==int(select_element)]
     if select_plane is not None:
-        search_list.append(lambda x: x[EventDisplayIndex.PLANE.value]==int(select_plane))
+        event_file_df = event_file_df[event_file_df['plane']==int(select_pane)]
 
-    return { k:v for k,v in event_file_dict.items() if all(s(k) for s in search_list) }
+    return event_file_df
         
 
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
-    filtered_files = filter_EventDisplay_files(directory, select_element, select_plane)
-    print("filtered_files", filtered_files, "directory", directory)
+    filtered_df = filter_EventDisplay_files(directory, select_element=select_element, select_plane=select_plane)
     # Now we get file for the max run/trigger for each element/plane
 
-    # Firstly split filtered files by element/plane
-    element_plane_dict = {}
-    for key, value in filtered_files.items():
-        element_plane_key = (key[EventDisplayIndex.ELEMENT.value], key[EventDisplayIndex.PLANE.value])
-        if element_plane_key not in element_plane_dict:
-            element_plane_dict[element_plane_key] = {}
-        element_plane_dict[element_plane_key][key] = value
-
-    # Now get the max run/trigger for each element/plane
-    max_files = {}
-    for (element, plane), files in element_plane_dict.items():
-        max_run = max(key[EventDisplayIndex.RUN] for key in files.keys())
-        max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
-        max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
+    
+    max_for_el_plane = (filtered_df.sort_values(['run', 'trigger'], ascending=[False, False])
+          .drop_duplicates(['element_id', 'plane'], keep='first')).sort_values(['element_id','plane'])
 
 
-    sorted_keys = sorted(max_files.keys(), key=lambda x: (x[0], x[1]))
-    sorted_images = [ max_files[key] for key in sorted_keys ]
-    print(sorted_images)
-
-    return sorted_images
+    return max_for_el_plane['filename'].to_list()
 
 
 @app.route('/')
