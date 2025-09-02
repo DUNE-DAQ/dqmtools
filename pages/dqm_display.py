@@ -99,9 +99,12 @@ def gather_EventDisplay_files(directory):
 def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, select_element=None, select_plane=None):
     
     event_file_dict = gather_EventDisplay_files(directory)
-        
-    search_list = [lambda _: True]
-    
+
+    if select_run is None and select_trigger is None and select_element is None and select_plane is None:
+        return event_file_dict
+
+
+    search_list = []    
     if select_run is not None:
         search_list.append(lambda x: x[EventDisplayIndex.RUN.value]==int(select_run))
     if select_trigger is not None:
