@@ -140,7 +140,7 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
         max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
         max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
     
-    raise Exception(max_files)
+    print(max_files)
 
     return max_files
 
