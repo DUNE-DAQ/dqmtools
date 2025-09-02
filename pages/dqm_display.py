@@ -106,6 +106,7 @@ def gather_EventDisplay_files(directory):
 def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, select_element=None, select_plane=None):
     
     event_file_dict = gather_EventDisplay_files(directory)
+    print(event_file_dict)
     
     search = lambda x: True
     
@@ -124,7 +125,6 @@ def filter_EventDisplay_files(directory, select_run=None, select_trigger=None, s
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
     filtered_files = filter_EventDisplay_files(directory, select_element, select_plane)
     
-    print(filtered_files)
     # Now we get file for the max run/trigger for each element/plane
 
     # Firstly split filtered files by element/plane
@@ -141,8 +141,6 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
         max_run = max(key[EventDisplayIndex.RUN] for key in files.keys())
         max_trigger = max(key[EventDisplayIndex.TRIGGER] for key in files.keys())
         max_files[(element, plane)] = files[(max_run, max_trigger, element, plane)]
-    
-    print(max_files)
 
     return max_files
 
