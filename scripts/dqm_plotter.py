@@ -122,7 +122,6 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
             fig.write_image(f"{output_dir}/EventDisplay_run{int(index[0])}_trigger{int(index[1])}_seq{int(index[2])}_{element}_plane{plane}.{imgtype}", scale=3)
             return f"EventDisplay_run{int(index[0])}_trigger{int(index[1])}_seq{int(index[2])}_{element}_plane{plane}.{imgtype}"
         
->>>>>>> 80ed74e1a687e54f3cc9d785f8e38d9947504860
         with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
             future_p = {executor.submit(make_adc_map_fig,
                                         p[0],p[1]): p for p in myplanes }
