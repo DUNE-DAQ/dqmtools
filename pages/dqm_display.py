@@ -3,7 +3,7 @@ import re
 import os
 from collections import defaultdict
 from cachetools import cached, TTLCache
-from enum import Enum
+from enum import IntEnum
 
 app = Flask(__name__)
 
@@ -13,7 +13,7 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 # Store the last modification time
 last_mod_time = 0
 
-class EventDisplayIndex(Enum):
+class EventDisplayIndex(IntEnum):
     RUN = 1
     TRIGGER = 2
     ELEMENT = 3
@@ -127,7 +127,7 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
     # Firstly split filtered files by element/plane
     element_plane_dict = {}
     for key, value in filtered_files.items():
-        element_plane_key = (key[EventDisplayIndex.ELEMENT], key[EventDisplayIndex.PLANE])
+        element_plane_key = (key[EventDisplayIndex.ELEMENT.value], key[EventDisplayIndex.PLANE.value])
         if element_plane_key not in element_plane_dict:
             element_plane_dict[element_plane_key] = {}
         element_plane_dict[element_plane_key][key] = value
