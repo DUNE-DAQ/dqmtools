@@ -6,19 +6,26 @@ import operator
 
 class CheckNFrames_TPC(DQMTest):
 
-    def __init__(self):
+    def __init__(self,frag_type = "WIBEth"):
         super().__init__()
-        self.name = "CheckNFrames_TPC"
+        self.name = f"CheckNFrames_{frag_type}_TPC"
+        self.frag_type = frag_type
 
-    def run_test(self,df_dict,frag_type = "WIBEth"):
+    def run_test(self,df_dict):
         expected_frag_number = {
             "WIBEth" : 12,
             "TDEEth" : 15
         }
-        df_tmp = df_dict["frh"].loc[df_dict["frh"]["fragment_type"]==expected_frag_number[frag_type]][["window_begin_dts","window_end_dts"]]
+        den = {
+            "WIBEth" : 32,
+            "TDEEth" : 31
+        }
+
+        df_tmp = df_dict["frh"].loc[df_dict["frh"]["fragment_type"]==expected_frag_number[self.frag_type]][["window_begin_dts","window_end_dts"]]
         if len(df_tmp)==0:
-            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No {frag_type} components found.')
-        df_tmp["expected_frames"] = np.floor((df_tmp["window_end_dts"]-df_tmp["window_begin_dts"])/(32*64))+1
+            return DQMTestResult(DQMResultEnum.WARNING,f'WARNING: No {self.frag_type} components found.')
+
+        df_tmp["expected_frames"] = np.floor((df_tmp["window_end_dts"]-df_tmp["window_begin_dts"])/(den[self.frag_type]*64))+1
         df_tmp = df_tmp.join(df_dict["daqh"][["n_obj"]])
         df_tmp["nframe_difference"] = df_tmp["expected_frames"]-df_tmp["n_obj"]
         n_frames_wrong = (abs(df_tmp["nframe_difference"])>=2).sum()
@@ -26,7 +33,7 @@ class CheckNFrames_TPC(DQMTest):
             return DQMTestResult(DQMResultEnum.OK,f'OK')
         else:
             return DQMTestResult(DQMResultEnum.BAD,
-                                 f'{n_frames_wrong} / {len(df_tmp)}{frag_type} fragments have the wrong number of frames.')
+                                 f'{n_frames_wrong} / {len(df_tmp)}{self.frag_type} fragments have the wrong number of frames.')
 
 class InitialHitThreshold_TPC(DQMTest):
 
