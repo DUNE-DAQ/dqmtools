@@ -21,6 +21,10 @@ import click
 import plotly.graph_objects as go
 from PIL import Image
 
+from collections import namedtuple
+
+DetInfo = namedtuple('DetInfo', ['name', 'frag_type'])
+
 
 def make_hit_thresholds_table(df_dict,thresholds,det_name,frag_type,run=None,trigger=None,seq=None,jpeg_base=None):
     fig = go.Figure(data=[go.Table(
@@ -153,28 +157,30 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
     else:
         extension = "png"
 
-    #setup our tests
-    dqm_test_suite_wibs = DQMTestSuite("WIBEth Tests")
-    dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
-    dqm_test_suite_wibs.register_test(CheckNFrames_TPC(frag_type = frag_type))
-    
     if hd:
-        tpc_det_name = "HD_TPC"
-        frag_type = "WIBEth"
+        det_info = [DetInfo("HD_TPC", "WIBEth")]
     else:
-        tpc_det_name = "VD_TopTPC"
-        frag_type = "TDEEth" # frag_type = "WIBEth"
+        det_info = [DetInfo("VD_TopTPC", "TDEEth"), DetInfo("VD_BottomTPC", "WIBEth")]
 
-    dqm_test_suite_wibs.register_test(CheckRMS_TPC(det_name=tpc_det_name,threshold=rms_threshold,verbose=True, frag_type = frag_type),
-                                        name=f"CheckRMS_{tpc_det_name}_High")
-    dqm_test_suite_wibs.register_test(CheckPedestal_TPC(det_name=tpc_det_name,verbose=True, frag_type = frag_type,lower_bound=[7500],upper_bound=[9500]),
-                                         name=f"CheckPedestal_{tpc_det_name}")
-    dqm_test_suite_wibs.register_test(InitialHitThreshold_TPC(det_name=tpc_det_name, multiplier=mean_rms_factor,verbose=True, frag_type = frag_type),
-                                        name=f"InitialHitThreshold_{tpc_det_name}_High")
-
+    #setup our tests
+    dqm_test_suite_wibs = DQMTestSuite(f"TPC Data Tests")
+    dqm_test_suite_wibs.register_test(CheckAllExpectedFragmentsTest())
+    for d in det_info:
+        if d.name == "VD_TopTPC":
+            bounds = [[7500], [9500]]
+        else:
+            bounds = [[7500,200],[9500,2000]]
+        dqm_test_suite_wibs.register_test(CheckNFrames_TPC(frag_type = d.frag_type))
+        dqm_test_suite_wibs.register_test(CheckRMS_TPC(det_name=d.name,threshold=rms_threshold,verbose=True, frag_type = d.frag_type),
+                                            name=f"CheckRMS_{d.name}_High")
+        dqm_test_suite_wibs.register_test(CheckPedestal_TPC(det_name=d.name,verbose=True, frag_type = d.frag_type,lower_bound=bounds[0],upper_bound=bounds[1]),
+                                            name=f"CheckPedestal_{d.name}")
+        dqm_test_suite_wibs.register_test(InitialHitThreshold_TPC(det_name=d.name, multiplier=mean_rms_factor,verbose=True, frag_type = d.frag_type),
+                                            name=f"InitialHitThreshold_{d.name}_High")
 
     dqm_test_suite = DQMTestSuite("Waveform data")
     dqm_test_suite.register_test(dqm_test_suite_wibs)
+
 
     df_dict = {}
     n_processed_records = 0
@@ -201,9 +207,10 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
     dqm_test_suite.run_test(df_dict)
 
     outputs = dqm_test_suite_wibs.get_test_outputs()
-    high_channels = outputs[f"CheckRMS_{tpc_det_name}_High"]
-    initial_hit_thresholds = outputs[f"InitialHitThreshold_{tpc_det_name}_High"]
 
+    print(outputs.keys())
+    high_channels = {d.name : outputs[f"CheckRMS_{d.name}_High"] for d in det_info}
+    initial_hit_thresholds = {d.name : outputs[f"InitialHitThreshold_{d.name}_High"] for d in det_info}
 
     print(dqm_test_suite.get_table(show_last_update=False))
 
@@ -216,24 +223,25 @@ def main(filenames, nrecords, nworkers, hd, vector, rms_threshold, mean_rms_fact
     # if len(triggers) == 1: triggers = triggers[0]
 
     figs = {}
-    figs[f"pdune2_{tpc_det_name}_rms"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_k{frag_type}'], trigger = triggers)
-    figs[f"pdune2_{tpc_det_name}_rms_fixrange"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{tpc_det_name}_k{frag_type}'],yrange=[-1,60], trigger = triggers)
-    print("Plotting ADC mean")
-    figs[f"pdune2_{tpc_det_name}_mean"] = plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{tpc_det_name}_k{frag_type}'], trigger = triggers)
+    for d in det_info:
+        figs[f"pdune2_{d.name}_rms"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{d.name}_k{d.frag_type}'], trigger = triggers)
+        figs[f"pdune2_{d.name}_rms_fixrange"] = plot_TPCData_by_channel(df_dict,var="adc_rms",det_keys=[f'detd_k{d.name}_k{d.frag_type}'],yrange=[-1,60], trigger = triggers)
+        print("Plotting ADC mean")
+        figs[f"pdune2_{d.name}_mean"] = plot_TPCData_by_channel(df_dict,var="adc_mean",det_keys=[f'detd_k{d.name}_k{d.frag_type}'], trigger = triggers)
 
-    for t in triggers:
-        print(f"Plotting event display for trigger: {t}")
-        figs = figs | make_evd(df_dict, tpc_det_name, t, tp_overlay = False)
-        if "trgd_kDAQ_kTriggerPrimitive" in df_dict:
-            print(f"Plotting TP event display for trigger {t}")
-            figs = figs | make_evd(df_dict, tpc_det_name, t, tp_overlay = True)
+        for t in triggers:
+            print(f"Plotting event display for trigger: {t}")
+            figs = figs | make_evd(df_dict, d.name, t, tp_overlay = False)
+            if "trgd_kDAQ_kTriggerPrimitive" in df_dict:
+                print(f"Plotting TP event display for trigger {t}")
+                figs = figs | make_evd(df_dict, d.name, t, tp_overlay = True)
 
-    print("Plotting table of Initial hit thresholds to set for the TPG")
-    figs[f"pdune2_{tpc_det_name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds, tpc_det_name, frag_type, trigger = triggers)
+        print("Plotting table of Initial hit thresholds to set for the TPG")
+        figs[f"pdune2_{d.name}_hit_thresholds"] = make_hit_thresholds_table(df_dict, initial_hit_thresholds[d.name], d.name, d.frag_type, trigger = triggers)
 
-    print("Plotting table of high noise channels")
-    for i, f in enumerate(make_bad_channels_table(df_dict, high_channels, rms_threshold, tpc_det_name, frag_type, trigger = triggers)):
-        figs[f"pdune2_{tpc_det_name}_high_channels_{i}"] = f
+        print("Plotting table of high noise channels")
+        for i, f in enumerate(make_bad_channels_table(df_dict, high_channels[d.name], rms_threshold, d.name, d.frag_type, trigger = triggers)):
+            figs[f"pdune2_{d.name}_high_channels_{i}"] = f
 
     print("Saving figures")
     def save(num, name, fig):
