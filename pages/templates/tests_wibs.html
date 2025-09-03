@@ -1,18 +1,18 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="grid-container">
 
   <div class="row">
     <div class="col-md-12">
-
-      <h1>ProtoDUNE DQM Tests: WIBS!!!</h1>
-
+      {% if run and trigger %}
+        <h1>ProtoDUNE DQM Tests: Run {{ run }}, Trigger {{ trigger }} – WIBs</h1>
+      {% else %}
+        <h1>ProtoDUNE DQM Tests: Latest WIBs</h1>
+      {% endif %}
     </div>
   </div>
 
- 
   {% for image in images %}
   <div class="row">
     <div class="image-container">

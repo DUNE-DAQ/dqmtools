@@ -1,14 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="grid-container">
 
   <div class="row">
     <div class="col-md-12">
-
-      <h1>NP04 DQM: PDS PLOTS!!</h1>
-
+      {% if run and trigger %}
+        <h1>NP04 DQM: Run {{ run }}, Trigger {{ trigger }} – PDS Plots</h1>
+      {% else %}
+        <h1>NP04 DQM: Latest PDS Plots</h1>
+      {% endif %}
     </div>
   </div>
 
@@ -21,5 +22,4 @@
   {% endfor %}
 
 </div>
-
 {% endblock %}

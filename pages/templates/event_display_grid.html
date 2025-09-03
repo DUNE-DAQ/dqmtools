@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="grid-container">
 
   <div class="row">
     <div class="col-md-12">
-      <h1>ProtoDUNE EVENT DISPLAYS: APA/CRP {{ ele }} GRID</h1>
+      {% if run and trigger %}
+        <h1>ProtoDUNE EVENT DISPLAYS: Run {{ run }}, Trigger {{ trigger }}, APA/CRP {{ ele }} GRID</h1>
+      {% else %}
+        <h1>ProtoDUNE EVENT DISPLAYS: Latest APA/CRP {{ ele }} GRID</h1>
+      {% endif %}
     </div>
   </div>
 
@@ -21,5 +24,4 @@
   </div>
 
 </div>
-
 {% endblock %}

@@ -162,7 +162,7 @@
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownELE">
                         {% for ele_no in [1,2,3,4,5] %}
-                        <a class="dropdown-item" href="{{ url_for('event_display', ele=ele_no) }}">APA/CRP {{ ele_no }} Displays</a>
+                        <a class="dropdown-item" href="{{ url_for('latest_event_display', ele=ele_no) }}">APA/CRP {{ ele_no }} Displays</a>
                         {% endfor %}
                     </div>
                 </li>
@@ -172,7 +172,7 @@
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownELEGrid">
                         {% for ele_no in [1,2,3,4,5] %}
-                        <a class="dropdown-item" href="{{ url_for('event_display_grid', ele=ele_no) }}">APA/CRP {{ ele_no }} Grid Display</a>
+                        <a class="dropdown-item" href="{{ url_for('latest_event_display_grid', ele=ele_no) }}">APA/CRP {{ ele_no }} Grid Display</a>
                         {% endfor %}
                     </div>
                 </li>
@@ -182,16 +182,20 @@
                     </a>
                     <div class="dropdown-menu" aria-labelledby="navbarDropdownPlane">
                         {% for plane_no in [0,1,2] %}
-                        <a class="dropdown-item" href="{{ url_for('event_display_plane', plane=plane_no) }}">Plane {{ plane_no }} Grid Display</a>
+                        <a class="dropdown-item" href="{{ url_for('latest_event_display_plane', plane=plane_no) }}">Plane {{ plane_no }} Grid Display</a>
                         {% endfor %}
                     </div>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('tests_wibs') }}">TPC WIB Test Results</a>
+                    <a class="nav-link" href="{{ url_for('latest_tests_wibs') }}">TPC WIB Test Results</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('pds') }}">PDS Plots</a>
+                    <a class="nav-link" href="{{ url_for('latest_pds') }}">PDS Plots</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('plot_navigator') }}">Plot Navigator</a>
+                </li>
+
             </ul>
         </div>
     </div>

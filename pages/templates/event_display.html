@@ -1,31 +1,33 @@
 {% extends "base.html" %}
 
 {% block content %}
-
 <div class="grid-container">
 
   <div class="row">
     <div class="col-md-12">
-
-      {% if plane %}
-      <h1>ProtoDUNE EVENT DISPLAYS: APA/CRP {{ ele }} Plane {{ plane }}</h1>
-      {% elif apa %}
-      <h1>ProtoDUNE EVENT DISPLAYS: APA/CRP {{ ele }}</h1>
+      {% if run and trigger %}
+        {% if plane %}
+          <h1>ProtoDUNE EVENT DISPLAYS: Run {{ run }}, Trigger {{ trigger }}, APA/CRP {{ ele }} Plane {{ plane }}</h1>
+        {% else %}
+          <h1>ProtoDUNE EVENT DISPLAYS: Run {{ run }}, Trigger {{ trigger }}, APA/CRP {{ ele }}</h1>
+        {% endif %}
       {% else %}
-      <h1>ProtoDUNE EVENT DISPLAYS</h1>
+        {% if plane %}
+          <h1>ProtoDUNE EVENT DISPLAYS: Latest APA/CRP {{ ele }} Plane {{ plane }}</h1>
+        {% else %}
+          <h1>ProtoDUNE EVENT DISPLAYS: Latest APA/CRP {{ ele }}</h1>
+        {% endif %}
       {% endif %}
-
     </div>
   </div>
 
-    {% for image in images %}
-    <div class="row">
-      <div class="image-container">
-        <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
-      </div>
+  {% for image in images %}
+  <div class="row">
+    <div class="image-container">
+      <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=image) }}" alt="{{ image }}"/>
     </div>
-    {% endfor %}
+  </div>
+  {% endfor %}
 
 </div>
-
 {% endblock %}
