@@ -13,78 +13,50 @@ IMAGE_DIRECTORY = '/nfs/rscratch/np04daq'
 # Store the last modification time
 last_mod_time = 0
 
-def get_latest_pds_plots(directory):
-    filename_regex = re.compile(r"run(\d+)_(\d+)_([^_]+)\.svg")
-    return filter_EventDisplay_files(directory, filename_regex)
 
-
-def get_latest_WIBTests_files(directory):
+def gather_EventDisplay_files(directory, filename_regex, to_find=['run', 'trigger', 'element_id', 'plane']):
+    file_dict = {k : [] for k in to_find}
+    file_dict['filename'] = []
     
-    filename_regex = re.compile(r"Tests_WIBS_results_run(\d+)_trigger(\d+)\.[^.]+")    
-    max_image = None
-    max_run = 0
-    max_trigger = 0
-    for filename in os.listdir(directory):
-        match = filename_regex.match(filename)
-        if match:
-            run = int(match.group(1))
-            trigger = int(match.group(2))
-            
-            # Check if this run and trigger number is larger than the current stored values
-            if (run > max_run) or (run == max_run and trigger > max_trigger):
-                max_run = run
-                max_trigger = trigger
-                max_image = filename
-                
-    return [ max_image ]
-
-
-def gather_EventDisplay_files(directory, filename_regex):
-        
-    # Regex parse ... for now
-    runs = []
-    triggers = []
-    elements = []
-    planes = []
-    filenames = []
     for filename in os.listdir(directory):
         match = filename_regex.match(filename)
         if not match:
             continue
 
-        # Get the information about the run
-        runs.append(int(match['run']))
-        triggers.append(int(match['trigger']))
-        elements.append(int(match['element_id']))
-        planes.append(int(match['plane']))
-        filenames.append(filename)
-    
-    return_df = pd.DataFrame.from_dict({'run': runs,
-                              'trigger': triggers,
-                              'element_id': elements,
-                              'plane': planes,
-                              'filename': filename})
+        for name in to_find:
+            file_dict[name].append(int(match[name]))
+        file_dict['filename'].append(filename)  # Fixed: was missing .append()
+
+    return_df = pd.DataFrame.from_dict(file_dict)
     return return_df
 
-
-def filter_EventDisplay_files(directory, filename_regex, select_run=None, select_trigger=None, select_element=None, select_plane=None):
+def filter_EventDisplay_files(directory, filename_regex, to_find=['run', 'trigger', 'element_id', 'plane'], filters: dict={}):
     '''
     Filter out unwanted entries
     '''
     
-    event_file_df = gather_EventDisplay_files(directory, filename_regex)
+    event_file_df = gather_EventDisplay_files(directory, filename_regex, to_find)
     
-    if select_run is not None:
-        event_file_df = event_file_df[event_file_df['run']==int(select_run)]
-    if select_trigger is not None:
-        event_file_df = event_file_df[event_file_df['trigger']==int(select_trigger)]
-    if select_element is not None:
-        event_file_df = event_file_df[event_file_df['element_id']==int(select_element)]
-    if select_plane is not None:
-        event_file_df = event_file_df[event_file_df['plane']==int(select_pane)]
-
+    for filter, val in filters.items():
+        if val is None:
+            continue
+        event_file_df = event_file_df[event_file_df[filter]==int(val)]
     return event_file_df
-        
+
+
+def get_latest_pds_plots(directory):
+    filename_regex = re.compile(r"run(?P<run>\d+)_(?P<trigger>\d+)_([^_]+)\.svg")
+    print(gather_EventDisplay_files(directory, filename_regex), ['run', 'trigger'])
+    return gather_EventDisplay_files(directory, filename_regex, ['run', 'trigger'])
+
+def get_latest_WIBTests_files(directory):
+    filename_regex = re.compile(r"Tests_WIBS_results_run(?P<run>\d+)_trigger(?P<trigger>\d+)\.[^.]+")    
+    filename_df = gather_EventDisplay_files(directory, filename_regex, ['run', 'trigger'])
+    
+    # Get max run and then max trigger for that run
+    max_image = filename_df.sort_values(['run','trigger']).iloc[0]['filename']
+    return [max_image]
+
 
 def get_latest_EventDisplay_files(directory, select_element=None, select_plane=None):
     filename_regex = re.compile(r"EventDisplay_run(\d+)_trigger(\d+)_seq\d+_APA(\d+)_plane(\d+)\.svg")
@@ -96,14 +68,12 @@ def get_latest_EventDisplay_files(directory, select_element=None, select_plane=N
             _plane(?P<plane>\d+)\.svg$""",
         re.X
     )
-
     
-    filtered_df = filter_EventDisplay_files(directory, filename_regex, select_element=select_element, select_plane=select_plane)
+    filtered_df = filter_EventDisplay_files(directory, filename_regex, filters={'element_id': select_element, 'plane_id': select_plane})
     # Now we get file for the max run/trigger for each element/plane
     
     max_for_el_plane = (filtered_df.sort_values(['run', 'trigger'], ascending=[False, False])
           .drop_duplicates(['element_id', 'plane'], keep='first')).sort_values(['element_id','plane'])
-
 
     return max_for_el_plane['filename'].to_list()
 
@@ -115,6 +85,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/event_display/')
+@app.route('/event_display/run<run>/trigger<trigger>')
 @app.route('/event_display/apa<ele>')
 @app.route('/event_display/apa<ele>_plane<plane>')
 @app.route('/event_display/crp<ele>')
@@ -153,7 +124,6 @@ import click
 @click.command()
 @click.argument('image_dir', type=click.Path(exists=True))
 @click.option('--port', default=8005, help='Which port to run the image browser on')
-
 def main(image_dir,port):
     global IMAGE_DIRECTORY
 
