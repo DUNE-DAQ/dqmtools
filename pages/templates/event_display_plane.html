@@ -16,13 +16,7 @@
 
       <div class="col-md-6">
         <div class="grid-image-container">
-          {% if plane == '2' and ELE == 0 %}
-          {# Modify the string as needed #}
-          {% set modified_filename = images[ELE] | replace('plane2', 'plane1') %}
-	  <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=modified_filename) }}" alt="alt"/>
-          {% else %}
           <img src="{{ url_for('serve_image', subdir='EventDisplays', filename=images[ELE]) }}" alt="alt"/>
-          {% endif %}
         </div>
       </div>
 
