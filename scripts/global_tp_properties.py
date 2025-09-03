@@ -24,7 +24,7 @@ def custom_prop(df_tp, prop):
         match prop:
             case 'time_start':
                 value = df_tp['time_start'].values - np.min(df_tp['time_start'].values)
-                bin_info = binning(value, bins=32)
+                bin_info = binning(value, bins=16)
             case 'samples_to_peak':
                 value = df_tp[df_tp['samples_to_peak'] <= df_tp['samples_to_peak'].quantile(0.99)]['samples_to_peak'].values
                 bin_info = binning(value, bins=32)
@@ -54,12 +54,17 @@ def clear_tmp_files(files):
             print(f"{file} does not exist.")
     return
 
-def images_to_pdf(figs, name = "tp_properties.pdf", save_dir="."):
-    all_figs = [Image.open(pic) for pic in figs]
-    ready_pics = [pic.convert('RGB') for pic in all_figs]
-    output_path = os.path.join(save_dir, name)
+def images_to_pdf(files, pdf_name, save_dir):
+    
+    ready_pics = [Image.open(f).convert("RGB") for f in files]
+    pdf_name = str(pdf_name)
+
+    if not pdf_name.lower().endswith(".pdf"):
+        pdf_name = f"{pdf_name}.pdf"
+
+    output_path = os.path.join(save_dir, pdf_name)
+
     ready_pics[0].save(output_path, save_all=True, append_images=ready_pics[1:])
-    clear_tmp_files(figs)
     return output_path
 
 
@@ -104,25 +109,31 @@ def main(filenames, nrecords, nworkers, save_dir):
 
     figs = {}
 
+    run = df_tp['run'].iloc[0]
+
     print("Plotting Global TP properties")
 
     for name, prop in zip(properties, df_tp.columns[1:]):
 
         if prop in tp_prop:
             value, bin_info = custom_prop(df_tp, prop)
+            bins = np.arange(bin_info[0], bin_info[1] + bin_info[2], bin_info[2])
+            counts, bins = np.histogram(value, bins=bins)
 
-            hist = go.Histogram(
-                x=value,
-                xbins=dict(start=bin_info[0], end=bin_info[1], size=bin_info[2]),
+            hist = go.Scatter(
+                x=np.repeat(bins, 2)[1:-1],   # repeat edges to form steps
+                y=np.repeat(counts, 2),
+                mode='lines',
+                line=dict(color='red', width=2),
                 name='Linear',
-                opacity=0.5,
                 yaxis='y1'
             )
-            hist_log = go.Histogram(
-                x=value,
-                xbins=dict(start=bin_info[0], end=bin_info[1], size=bin_info[2]),
+            hist_log = go.Scatter(
+                x=np.repeat(bins, 2)[1:-1],   # repeat edges to form steps
+                y=np.repeat(counts, 2),
+                mode='lines',
+                line=dict(color='blue', width=2),
                 name='Log',
-                opacity=0.5,
                 yaxis='y2'
             )
 
@@ -149,14 +160,17 @@ def main(filenames, nrecords, nworkers, save_dir):
 
         else:
             value = df_tp[prop].values
-            fig = go.Figure(data=[
-                go.Histogram(
-                    x=value,
-                    nbinsx=100,
-                    name='Linear',
-                    opacity=0.5
-                )
-            ])
+            counts, bins = np.histogram(value, bins=100)
+
+            hist = go.Scatter(
+                x = np.repeat(bins, 2)[1:-1],
+                y = np.repeat(counts, 2),
+                mode='lines',
+                line=dict(color='red', width=2),
+                name='Linear',
+                yaxis='y1'
+            )
+            fig = go.Figure(data=[hist])
 
             fig.update_layout(
                 title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
@@ -176,17 +190,19 @@ def main(filenames, nrecords, nworkers, save_dir):
                 template='plotly_white',
                 legend=dict(x=0.7, y=0.95)
             )
-
+            
         fig_name = f"TP_properties_run{df_tp['run'].iloc[0]}_{prop}"
         figs[fig_name] = fig
     
-    extension = "png"  
+    extension = "png" 
 
-# Save in parallel
+    pdf_name = f'tp_properties_run_{run}' 
+
+    # Save in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
         files = list(executor.map(lambda kv: save_plot(kv, extension, save_dir), figs.items()))
     
-    final_pdf = images_to_pdf(files, "tp_properties_output.pdf", save_dir)
+    final_pdf = images_to_pdf(files, pdf_name, save_dir)
     print(f"TP histogram PDF saved to {final_pdf}")
 
 if __name__ == '__main__':
