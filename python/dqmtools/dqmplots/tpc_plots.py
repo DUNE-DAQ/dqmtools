@@ -429,6 +429,9 @@ def plot_TPC_adc_map(df_dict,
     #if we aren't doing the TP overlay, we are done
     if not make_tp_overlay:
         return fig
+    
+    if not 'trgd_kDAQ_kTriggerPrimitive' in df_dict:
+        return fig
 
     #if we are, let's grab the TPs
     df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
