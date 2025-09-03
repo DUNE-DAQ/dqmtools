@@ -25,7 +25,7 @@
 
                         <div id="collapse{{ run }}" class="collapse" aria-labelledby="heading{{ run }}" data-parent="#runAccordion">
                             <div class="card-body">
-                                {% for trigger in triggers %}
+                                {% for trigger, availability in triggers.items() %}
                                 <div class="trigger-section mb-4">
                                     <h5 class="trigger-title">
                                         <i class="fas fa-caret-right"></i> Trigger {{ trigger }}
@@ -36,26 +36,30 @@
                                             <h6 class="text-primary">Event Displays</h6>
                                             <ul class="list-unstyled ml-3">
                                                 {% for ele_no in [1,2,3,4,5] %}
-                                                <li>
-                                                    <a href="{{ url_for('run_trigger_event_display', run=run, trigger=trigger, ele=ele_no) }}" 
-                                                       class="text-decoration-none">
-                                                        <i class="fas fa-chart-line"></i> APA/CRP {{ ele_no }} Display
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <a href="{{ url_for('run_trigger_event_display_grid', run=run, trigger=trigger, ele=ele_no) }}" 
-                                                       class="text-decoration-none">
-                                                        <i class="fas fa-th"></i> APA/CRP {{ ele_no }} Grid
-                                                    </a>
-                                                </li>
+                                                    {% if availability.event_display[ele_no] %}
+                                                    <li>
+                                                        <a href="{{ url_for('run_trigger_event_display', run=run, trigger=trigger, ele=ele_no) }}" 
+                                                           class="text-decoration-none">
+                                                            <i class="fas fa-chart-line"></i> APA/CRP {{ ele_no }} Display
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a href="{{ url_for('run_trigger_event_display_grid', run=run, trigger=trigger, ele=ele_no) }}" 
+                                                           class="text-decoration-none">
+                                                            <i class="fas fa-th"></i> APA/CRP {{ ele_no }} Grid
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
                                                 {% endfor %}
                                                 {% for plane_no in [0,1,2] %}
-                                                <li>
-                                                    <a href="{{ url_for('run_trigger_event_display_plane', run=run, trigger=trigger, plane=plane_no) }}" 
-                                                       class="text-decoration-none">
-                                                        <i class="fas fa-layer-group"></i> Plane {{ plane_no }} Grid
-                                                    </a>
-                                                </li>
+                                                    {% if availability.plane_display[plane_no] %}
+                                                    <li>
+                                                        <a href="{{ url_for('run_trigger_event_display_plane', run=run, trigger=trigger, plane=plane_no) }}" 
+                                                           class="text-decoration-none">
+                                                            <i class="fas fa-layer-group"></i> Plane {{ plane_no }} Grid
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
                                                 {% endfor %}
                                             </ul>
                                         </div>
@@ -64,12 +68,14 @@
                                         <div class="col-md-4">
                                             <h6 class="text-success">Test Results</h6>
                                             <ul class="list-unstyled ml-3">
+                                                {% if availability.wib_tests %}
                                                 <li>
                                                     <a href="{{ url_for('run_trigger_tests_wibs', run=run, trigger=trigger) }}" 
                                                        class="text-decoration-none">
                                                         <i class="fas fa-vial"></i> TPC WIB Test Results
                                                     </a>
                                                 </li>
+                                                {% endif %}
                                             </ul>
                                         </div>
 
@@ -77,12 +83,14 @@
                                         <div class="col-md-4">
                                             <h6 class="text-warning">PDS Plots</h6>
                                             <ul class="list-unstyled ml-3">
+                                                {% if availability.pds %}
                                                 <li>
                                                     <a href="{{ url_for('run_trigger_pds', run=run, trigger=trigger) }}" 
                                                        class="text-decoration-none">
                                                         <i class="fas fa-chart-area"></i> PDS Plots
                                                     </a>
                                                 </li>
+                                                {% endif %}
                                             </ul>
                                         </div>
                                     </div>
@@ -162,29 +170,4 @@
     transition: transform 0.3s ease;
 }
 </style>
-
-<script>
-// Add rotation effect to chevron icons
-document.addEventListener('DOMContentLoaded', function() {
-    const collapseElements = document.querySelectorAll('.collapse');
-    
-    collapseElements.forEach(function(collapseEl) {
-        collapseEl.addEventListener('shown.bs.collapse', function() {
-            const runId = this.id.replace('collapse', '');
-            const icon = document.getElementById('icon' + runId);
-            if (icon) {
-                icon.style.transform = 'rotate(90deg)';
-            }
-        });
-        
-        collapseEl.addEventListener('hidden.bs.collapse', function() {
-            const runId = this.id.replace('collapse', '');
-            const icon = document.getElementById('icon' + runId);
-            if (icon) {
-                icon.style.transform = 'rotate(0deg)';
-            }
-        });
-    });
-});
-</script>
 {% endblock %}

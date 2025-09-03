@@ -162,7 +162,7 @@ def get_all_run_trigger_combinations():
         for _, row in all_combinations.iterrows():
             run = int(row['run'])
             trigger = int(row['trigger'])
-            if run not in run_trigger_dict:~
+            if run not in run_trigger_dict:
                 run_trigger_dict[run] = []
             run_trigger_dict[run].append(trigger)
         
@@ -174,6 +174,106 @@ def get_all_run_trigger_combinations():
     
     return {}
 
+def get_run_trigger_data_with_availability():
+    '''We don't need to render everything!'''
+    runs_triggers = get_all_run_trigger_combinations()
+    result = {}
+
+    for run, triggers in runs_triggers.items():
+        result[run] = {}
+        for trigger in triggers:
+            result[run][trigger] = {
+                "event_display": {ele: bool(get_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays",
+                                                                   select_run=run,
+                                                                   select_trigger=trigger,
+                                                                   select_element=ele)) 
+                                  for ele in [1,2,3,4,5]},
+                "plane_display": {plane: bool(get_EventDisplay_files(IMAGE_DIRECTORY + "/EventDisplays",
+                                                                     select_run=run,
+                                                                     select_trigger=trigger,
+                                                                     select_plane=plane)) 
+                                  for plane in [0,1,2]},
+                "wib_tests": bool(get_WIBTests_files(IMAGE_DIRECTORY + "/WIBTests",
+                                                     select_run=run, select_trigger=trigger)),
+                "pds": bool(get_pds_plots(IMAGE_DIRECTORY + "/pds_plots",
+                                          select_run=run, select_trigger=trigger))
+            }
+    return result
+
+
+def build_run_trigger_lookup():
+    """
+    Build a lookup dict of all available objects per run/trigger.
+    Scans each directory only once for speed.
+    """
+    lookup = {}
+
+    # --- EventDisplays ---
+    evd_dir = os.path.join(IMAGE_DIRECTORY, "EventDisplays")
+    evd_regex = re.compile(
+        r"^EventDisplay_run(?P<run>\d+)_trigger(?P<trigger>\d+)_seq\d+_(?P<type>APA|CRP)(?P<ele>\d+)?_plane(?P<plane>\d+)\.png$"
+    )
+
+    if os.path.exists(evd_dir):
+        for fname in os.listdir(evd_dir):
+            match = evd_regex.match(fname)
+            if not match:
+                continue
+            run = int(match.group('run'))
+            trigger = int(match.group('trigger'))
+            ele = int(match.group('ele')) if match.group('ele') else None
+            plane = int(match.group('plane'))
+
+            if run not in lookup:
+                lookup[run] = {}
+            if trigger not in lookup[run]:
+                lookup[run][trigger] = {
+                    "event_display": {},
+                    "plane_display": {},
+                    "wib_tests": False,
+                    "pds": False
+                }
+
+            if ele is not None:
+                lookup[run][trigger]["event_display"][ele] = True
+            lookup[run][trigger]["plane_display"][plane] = True
+
+    # --- WIB Tests ---
+    wib_dir = os.path.join(IMAGE_DIRECTORY, "WIBTests")
+    wib_regex = re.compile(r"Tests_WIBS_results_run(?P<run>\d+)_trigger(?P<trigger>\d+)\.[^.]+")
+    if os.path.exists(wib_dir):
+        for fname in os.listdir(wib_dir):
+            match = wib_regex.match(fname)
+            if not match:
+                continue
+            run = int(match.group('run'))
+            trigger = int(match.group('trigger'))
+            lookup.setdefault(run, {}).setdefault(trigger, {
+                "event_display": {},
+                "plane_display": {},
+                "wib_tests": False,
+                "pds": False
+            })["wib_tests"] = True
+
+    # --- PDS Plots ---
+    pds_dir = os.path.join(IMAGE_DIRECTORY, "pds_plots")
+    pds_regex = re.compile(r"run(?P<run>\d+)_(?P<trigger>\d+)_.*\.svg")
+    if os.path.exists(pds_dir):
+        for fname in os.listdir(pds_dir):
+            match = pds_regex.match(fname)
+            if not match:
+                continue
+            run = int(match.group('run'))
+            trigger = int(match.group('trigger'))
+            lookup.setdefault(run, {}).setdefault(trigger, {
+                "event_display": {},
+                "plane_display": {},
+                "wib_tests": False,
+                "pds": False
+            })["pds"] = True
+
+    return lookup
+
 
 @app.route('/')
 @app.route('/index')
@@ -183,7 +283,7 @@ def index():
 
 @app.route('/plot_navigator')
 def plot_navigator():
-    run_trigger_data = get_all_run_trigger_combinations()
+    run_trigger_data = build_run_trigger_lookup()
     return render_template('plot_navigator.html', run_trigger_data=run_trigger_data)
 
 # Latest objects
