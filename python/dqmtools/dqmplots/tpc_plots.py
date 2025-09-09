@@ -143,7 +143,7 @@ def prep_TPC_adc_map(df_dict,det_keys,ele,plane,
 
     if len(df_all)==0: 
         print(f"No element {ele} (element_id={element_id}) found.")
-        return empty_plot()
+        return None
 
     df_tmp = pd.concat(df_all,ignore_index=True)
 
@@ -231,6 +231,10 @@ def plot_TPC_adc_map_mpl(df_dict,det_keys,ele,plane,
                      trigger=trigger,
                      seq=seq
         )
+
+    if plot_data is None:
+        fig, ax = plt.subplots(1,1, figsize=figsize)
+        return fig
 
     xdata, xmin, xmax = plot_data['x']
     ydata, ymin, ymax = plot_data['y']
