@@ -140,10 +140,6 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
             pd.set_option('display.max_columns', None)
             print(df_dict["trh"])
             
-        # # FIXME : use op_env instead?
-        # hd = any("kHD" in k for k in det_keys) #else, vd
-        print(ws.op_env)
-
         match ws.op_env:
             # FIXME: add map
             case 'np02vd' | 'np02cb': 
@@ -179,7 +175,8 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         for el in elements:
             for plane in planes:
                 myplanes.append((el,plane))
-        print(f"Elapsed time {df_load_elapsed_time}")
+        df_prep_elapsed_time = timeit.default_timer()-df_load_start_time
+        print(f"Elapsed time {df_prep_elapsed_time}")
 
         with concurrent.futures.ProcessPoolExecutor(max_workers=nworkers) as executor:
             # myplanes = myplanes[2:3]
@@ -197,8 +194,8 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
         print(f"Done with {record_count} records.")
 
     # return img_file_name
-    df_load_elapsed_time = timeit.default_timer()-df_load_start_time
-    print(f"Elapsed time {df_load_elapsed_time}")
+    df_total_elapsed_time = timeit.default_timer()-df_load_start_time
+    print(f"Elapsed time {df_total_elapsed_time}")
 
 if __name__ == '__main__':
     main()
