@@ -79,6 +79,7 @@ def make_event_display(filename, rid, element, plane, output_dir, imgtype):
     fig.tight_layout()
     fig.savefig(output_dir+'/'+img_file_name)
     print(f"Image {img_file_name} saved")
+    return img_file_name
 
 
 @click.command()
