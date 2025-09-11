@@ -7,11 +7,98 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from PIL import Image
+from plotly.subplots import make_subplots
 import concurrent.futures
 
 properties = ['Trigger', 'Sequence', 'Src ID', 'Time Start', 'Samples to Peak',
               'Samples over Threshold', 'Channels', 'Plane', 'Element', 'ADC Integral', 'ADC Peak', 'Detector ID', 'Flag', 'ID ta']
-tp_prop = ['time_start', 'samples_to_peak', 'samples_over_threshold', 'adc_integral', 'adc_peak']
+tp_prop = {'time_start':'Time Start',
+        'samples_to_peak': 'Samples to Peak',
+        'samples_over_threshold': 'Samples over Threshold',
+        'adc_integral': 'ADC Integral',
+        'adc_peak': 'ADC Peak'}
+
+def param_compare(df_tp, figs):
+    tde = [2, 3]
+    bde = [4, 5]
+    planes = np.unique(df_tp['plane'].to_numpy())
+
+    color_crp = {2: 'red', 3: 'blue', 4: 'green', 5: 'orange'}
+    
+    groups = []
+    if df_tp['element'].isin(tde).any():
+        groups.append(('TDE', tde))
+    if df_tp['element'].isin(bde).any():
+        groups.append(('BDE', bde))
+
+    if not groups:
+        print("No CRP data found in dataframe.")
+        return {}
+
+    for prop in tp_prop.items():
+        # One figure per property
+        fig = make_subplots(
+            rows=len(groups), cols=len(planes),
+            subplot_titles=[f"Plane {pl}" for _ in groups for pl in planes]
+        )
+
+        for j, (crp_name, crp) in enumerate(groups):   # rows
+            shown_legends = set()
+            for i, pl in enumerate(planes):            # cols
+                for ele in crp:
+                    df = df_tp[(df_tp['element'] == ele) & (df_tp['plane'] == pl)]
+                    if len(df) < 5:
+                        print(f"Less than 5 entries for {prop[1]} for Plane {pl} of CRP {ele}")
+                        continue
+
+                    value, bin_info = custom_prop(df, prop[0])
+                    start, stop, step = bin_info
+                    if step <= 0 or start >= stop:
+                        bins = np.linspace(value.min(), value.max(), 100)
+                    else:
+                        bins = np.arange(start, stop + step, step)
+                    counts, bins = np.histogram(value, bins=bins)
+
+                    fig.add_trace(
+                        go.Scatter(
+                            x=np.repeat(bins, 2)[1:-1],
+                            y=np.repeat(counts, 2),
+                            mode='lines',
+                            line=dict(width=1, color=color_crp.get(ele, 'black')),
+                            name=f"CRP {ele}",
+                            legendgroup=f"CRP{ele}",
+                            showlegend=(ele not in shown_legends)
+                        ),
+                        row=j+1, col=i+1
+                    )
+                    shown_legends.add(ele)
+
+        # Annotations
+        fig.add_annotation(
+            text=prop[1], showarrow=False,
+            xref="paper", yref="paper",
+            x=0.5, y=-0.15, font=dict(size=20)
+        )
+        fig.add_annotation(
+            text="TP Count", showarrow=False,
+            xref="paper", yref="paper",
+            x=-0.10, y=0.5, font=dict(size=20),
+            textangle=-90
+        )
+
+        fig.update_layout(
+            width=1500,
+            height=450*len(groups),
+            title=dict(
+                text=f"Run {df_tp['run'].iloc[0]}: {prop[1]} Histograms",
+                font=dict(size=24)
+            ),
+            template="plotly_white"
+        )
+
+        figs[f'Comparison of CRP elements for {prop[1]}'] = fig
+
+    return figs
 
 def binning(value, bins):
     bin_min = np.min(value)
@@ -46,25 +133,21 @@ def save_plot(k_v_tuple, extension, save_dir):
     pio.write_image(v, filename, format=extension, scale=4)
     return filename
 
-def clear_tmp_files(files):
-    for file in files:
-        if os.path.exists(file):
-            os.remove(file)
-        else:
-            print(f"{file} does not exist.")
-    return
-
 def images_to_pdf(files, pdf_name, save_dir):
-    
     ready_pics = [Image.open(f).convert("RGB") for f in files]
-    pdf_name = str(pdf_name)
-
     if not pdf_name.lower().endswith(".pdf"):
         pdf_name = f"{pdf_name}.pdf"
 
     output_path = os.path.join(save_dir, pdf_name)
 
     ready_pics[0].save(output_path, save_all=True, append_images=ready_pics[1:])
+
+    for f in files:
+        if os.path.exists(f):
+            os.remove(f)
+        else:
+            print(f"{f} does not exist.")
+
     return output_path
 
 
@@ -102,11 +185,6 @@ def main(filenames, nrecords, nworkers, save_dir):
 
     print("Structure of df_tp:", df_tp.head())
 
-    #df_dict["trh"]['trigger_time_cern'] = pd.to_datetime(df_dict["trh"]['trigger_time'])
-    #df_dict['trh']['trigger_time_cern'] = df_dict['trh']['trigger_time_cern'].dt.tz_convert('Europe/Zurich')
-    #trigger_timestamp = df_dict["trh"]["trigger_time"].iloc[0]
-    #trigger_timestamp_cern = df_dict["trh"]["trigger_time_cern"].iloc[0]
-
     figs = {}
 
     run = df_tp['run'].iloc[0]
@@ -124,7 +202,7 @@ def main(filenames, nrecords, nworkers, save_dir):
                 x=np.repeat(bins, 2)[1:-1],   # repeat edges to form steps
                 y=np.repeat(counts, 2),
                 mode='lines',
-                line=dict(color='red', width=2),
+                line=dict(color='red', width=1),
                 name='Linear',
                 yaxis='y1'
             )
@@ -132,7 +210,7 @@ def main(filenames, nrecords, nworkers, save_dir):
                 x=np.repeat(bins, 2)[1:-1],   # repeat edges to form steps
                 y=np.repeat(counts, 2),
                 mode='lines',
-                line=dict(color='blue', width=2),
+                line=dict(color='blue', width=1),
                 name='Log',
                 yaxis='y2'
             )
@@ -166,7 +244,7 @@ def main(filenames, nrecords, nworkers, save_dir):
                 x = np.repeat(bins, 2)[1:-1],
                 y = np.repeat(counts, 2),
                 mode='lines',
-                line=dict(color='red', width=2),
+                line=dict(color='red', width=1),
                 name='Linear',
                 yaxis='y1'
             )
@@ -187,16 +265,17 @@ def main(filenames, nrecords, nworkers, save_dir):
                     type='log'
                 ),
                 barmode='overlay',
-                template='plotly_white',
+                template= 'plotly_white',
                 legend=dict(x=0.7, y=0.95)
             )
             
         fig_name = f"TP_properties_run{df_tp['run'].iloc[0]}_{prop}"
         figs[fig_name] = fig
-    
-    extension = "png" 
 
-    pdf_name = f'tp_properties_run_{run}' 
+    extension = "png" 
+    pdf_name = f'tp_properties_run_{run}'
+
+    figs = param_compare(df_tp, figs) 
 
     # Save in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=nworkers) as executor:
