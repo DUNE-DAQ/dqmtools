@@ -3,7 +3,7 @@ import dqmtools.dataframe_creator as dfc
 import os
 import plotly.io as pio
 import click
-import pandas as pd
+#import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from PIL import Image
@@ -18,12 +18,35 @@ tp_prop = {'time_start':'Time Start',
         'adc_integral': 'ADC Integral',
         'adc_peak': 'ADC Peak'}
 
+def classify_det_comp(elements):
+    """Return detector classification based on element numbers."""
+    elements = set(elements)
+
+    hd = {1, 2, 3, 4}
+    vd_top = {2, 3}
+    vd_bottom = {4, 5}
+
+    if elements.issubset(hd) and not (elements & vd_top or elements & vd_bottom):
+        return "HD_TPC"
+    elif elements.issubset(vd_top):
+        return "VD_TopTPC"
+    elif elements.issubset(vd_bottom):
+        return "VD_BottomTPC"
+    elif elements.issubset(vd_top | vd_bottom):
+        return "VD_TopTPC + VD_BottomTPC"
+    else:
+        return "ERROR: det_id must be one of [HD_TPC, VD_BottomTPC, VD_TopTPC]."
+
 def param_compare(df_tp, figs):
+
     tde = [2, 3]
     bde = [4, 5]
     planes = np.unique(df_tp['plane'].to_numpy())
 
     color_crp = {2: 'red', 3: 'blue', 4: 'green', 5: 'orange'}
+
+    elements = df_tp['element'].unique()
+    detector_str = classify_det_comp(elements)
     
     groups = []
     if df_tp['element'].isin(tde).any():
@@ -77,12 +100,12 @@ def param_compare(df_tp, figs):
         fig.add_annotation(
             text=prop[1], showarrow=False,
             xref="paper", yref="paper",
-            x=0.5, y=-0.15, font=dict(size=20)
+            x=0.5, y=-0.15, font=dict(size=16)
         )
         fig.add_annotation(
             text="TP Count", showarrow=False,
             xref="paper", yref="paper",
-            x=-0.10, y=0.5, font=dict(size=20),
+            x=-0.10, y=0.5, font=dict(size=16),
             textangle=-90
         )
 
@@ -90,8 +113,8 @@ def param_compare(df_tp, figs):
             width=1500,
             height=450*len(groups),
             title=dict(
-                text=f"Run {df_tp['run'].iloc[0]}: {prop[1]} Histograms",
-                font=dict(size=24)
+                text=f"Run {df_tp['run'].iloc[0]}: {prop[1]} ({detector_str})",
+                font=dict(size=20)
             ),
             template="plotly_white"
         )
@@ -108,23 +131,25 @@ def binning(value, bins):
     return bin_info
 
 def custom_prop(df_tp, prop):
-        match prop:
-            case 'time_start':
-                value = df_tp['time_start'].values - np.min(df_tp['time_start'].values)
-                bin_info = binning(value, bins=16)
-            case 'samples_to_peak':
-                value = df_tp[df_tp['samples_to_peak'] <= df_tp['samples_to_peak'].quantile(0.99)]['samples_to_peak'].values
-                bin_info = binning(value, bins=32)
-            case 'samples_over_threshold':
-                value = df_tp[df_tp['samples_over_threshold'] <= df_tp['samples_over_threshold'].quantile(0.99)]['samples_over_threshold'].values
-                bin_info = binning(value, bins=32)
-            case 'adc_integral':
-                value = df_tp[df_tp['adc_integral'] <= df_tp['adc_integral'].quantile(0.80)]['adc_integral'].values
-                bin_info = binning(value, bins=100)
-            case 'adc_peak':
-                value = df_tp[df_tp['adc_peak'] <= df_tp['adc_peak'].quantile(0.80)]['adc_peak'].values
-                bin_info = binning(value, bins=100)
-        return value, bin_info
+    def roundup(value):
+        return round(value/50) * 50
+    match prop:
+        case 'time_start':
+            value = df_tp['time_start'].values - np.min(df_tp['time_start'].values)
+            bin_info = binning(value, bins=16)
+        case 'samples_to_peak':
+            value = df_tp[df_tp['samples_to_peak'] <= df_tp['samples_to_peak'].quantile(0.995)]['samples_to_peak'].values
+            bin_info = binning(value, bins=16)
+        case 'samples_over_threshold':
+            value = df_tp[df_tp['samples_over_threshold'] <= df_tp['samples_over_threshold'].quantile(0.995)]['samples_over_threshold'].values
+            bin_info = binning(value, bins=16)
+        case 'adc_integral':
+            value = df_tp[df_tp['adc_integral'] <= roundup(df_tp['adc_integral'].quantile(0.995))]['adc_integral'].values
+            bin_info = binning(value, bins=100)
+        case 'adc_peak':
+            value = df_tp[df_tp['adc_peak'] <= roundup(df_tp['adc_peak'].quantile(0.995))]['adc_peak'].values
+            bin_info = binning(value, bins=50)
+    return value, bin_info
 
 def save_plot(k_v_tuple, extension, save_dir):
     k, v = k_v_tuple
@@ -180,10 +205,21 @@ def main(filenames, nrecords, nworkers, save_dir):
             n_processed_records += 1
 
     df_dict = dfc.concatenate_dataframes(df_dict)
-    df_tp = df_dict['trgd_kDAQ_kTriggerPrimitive']
+
+    if "trgd_kDAQ_kTriggerPrimitive" in df_dict:
+        print("Constructing TP dataframe from TR")
+        df_tp = df_dict['trgd_kDAQ_kTriggerPrimitive']
+    elif "trgh_kDAQ_kTriggerPrimitive" in df_dict:
+        print("Constructing TP dataframe from TPStream")
+        df_tp = df_dict['trgh_kDAQ_kTriggerPrimitive']
+
     df_tp = df_tp.reset_index()
 
     print("Structure of df_tp:", df_tp.head())
+
+    detectors = df_tp['element'].unique()
+    detector_names = [classify_det_comp(detectors)]
+    detector_str = ", ".join(sorted(set(detector_names)))
 
     figs = {}
 
@@ -218,7 +254,7 @@ def main(filenames, nrecords, nworkers, save_dir):
             fig = go.Figure(data=[hist, hist_log])
 
             fig.update_layout(
-                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
+                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name} ({detector_str})", font=dict(size=20)),
                 xaxis_title=name,
                 yaxis=dict(
                     title='Counts (Linear)',
@@ -251,7 +287,7 @@ def main(filenames, nrecords, nworkers, save_dir):
             fig = go.Figure(data=[hist])
 
             fig.update_layout(
-                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name}", font=dict(size=24)),
+                title=dict(text=f"Run {df_tp['run'].iloc[0]} {name} ({detector_str})", font=dict(size=20)),
                 xaxis_title=name,
                 yaxis=dict(
                     title='Counts (Linear)',

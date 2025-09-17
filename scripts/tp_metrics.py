@@ -12,273 +12,172 @@ import plotly.graph_objects as go
 import concurrent.futures
 import click
 
-def tp_metrics(df_tp):
+def classify_det_comp(elements):
+    """Return detector classification based on element numbers."""
+    elements = set(elements)
+    hd, vd_top, vd_bottom = {1,2,3,4}, {2,3}, {4,5}
+
+    if elements <= hd and not elements & (vd_top | vd_bottom):
+        return "HD_TPC"
+    if elements <= vd_top:
+        return "VD_TopTPC"
+    if elements <= vd_bottom:
+        return "VD_BottomTPC"
+    if elements <= (vd_top | vd_bottom):
+        return "VD_TopTPC + VD_BottomTPC"
     
-    tde = [2, 3]
-    bde = [4, 5]
+    return "ERROR: det_id must be one of [HD_TPC, VD_BottomTPC, VD_TopTPC]."
+
+
+def tp_metrics(df_tp):
+    """Compute TP metrics and return fig data."""
     planes = np.unique(df_tp['plane'].to_numpy())
-    ind_plane = [0, 1]
-    elements = np.unique(df_tp['element'].to_numpy())
+    elements = set(np.unique(df_tp['element'].to_numpy()))
+    top_tpc, bottom_tpc = {2,3}, {4,5}
 
+    # Determine detector groups present
+    groups = {}
+    if elements & top_tpc: groups['Top TPC'] = top_tpc
+    if elements & bottom_tpc: groups['Bottom TPC'] = bottom_tpc
+
+    element_to_det = {ele: classify_det_comp([ele]) for ele in elements}
     figs = {}
+    triggers = np.unique(df_tp['trigger'].to_numpy())
 
-    def tp_rate_channel(df_tp):
+    # --- TP rate per channel ---
+    def tp_rate_channel(df):
         for pl in planes:
-
-            fig = make_subplots(rows=2, cols=1, subplot_titles=["TDE", "BDE"])
-
-            for i, (name, crp) in enumerate([('TDE', tde), ('BDE', bde)]):
-
-                for ele in crp:
-                    df = df_tp[(df_tp['element'] == ele) & (df_tp['plane'] == pl)]
-
-                    if df.empty:
-                        print(f"No entries for Plane {pl} of CRP {ele}")
+            fig = make_subplots(
+                rows=len(groups), cols=1,
+                subplot_titles=list(groups.keys())
+            )
+            for row_idx, (name, grp) in enumerate(groups.items()):
+                shown_legends = set()
+                for ele in grp:
+                    df_ele = df[(df['element']==ele) & (df['plane']==pl)]
+                    if df_ele.empty:
+                        print(f"No TPs for CRP {ele} - Plane {pl}")
                         continue
 
-                    ch = df['channel'].to_numpy()
-                    ch = ch - np.min(ch)
-
-                    if len(ch) < 1:
-                        continue
-
-                    ch_id = np.arange(np.min(ch), np.max(ch) + 1)
+                    ch = df_ele['channel'].to_numpy() - np.min(df_ele['channel'].to_numpy())
+                    ch_id = np.arange(np.min(ch), np.max(ch)+1)
                     counts, _ = np.histogram(ch, bins=ch_id)
 
                     fig.add_trace(go.Scatter(
-                        x=ch_id,
-                        y=counts,
-                        mode='markers',
-                        marker=dict(size=5),
-                        name=f'CRP {ele}'
-                    ), row=i+1, col=1)
+                        x=ch_id, y=counts, mode='markers', marker=dict(size=5),
+                        name=f"{name} CRP {ele}", legendgroup=f"CRP {ele}",
+                        showlegend=ele not in shown_legends
+                    ), row=row_idx+1, col=1)
+                    shown_legends.add(ele)
 
             fig.add_annotation(
-                text="Channel index",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=-0.15,
-                font=dict(size=16),
-                textangle=0
-            )
+                text="Channel index", showarrow=False, xref="paper", yref="paper",
+                x=0.5, y=-0.15, font=dict(size=16), textangle=0)
 
             fig.add_annotation(
-                text="TP Count",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=-0.09,
-                y=0.5,
-                font=dict(size=16),
-                textangle=-90
-            )
+                text="TP Count", showarrow=False, xref="paper", yref="paper",
+                x=-0.1, y=0.5, font=dict(size=16), textangle=-90)
 
             fig.update_layout(
-                width=1500,
-                height=600,
-                title=dict(
-                    text=f"Run {df_tp['run'].iloc[0]}: TP Count per channel (Plane {pl})",
-                    font=dict(size=20)
-                ))
+                width=1500, height=300*len(groups),
+                title=dict(text=f"Run {df['run'].iloc[0]}: TP Count per channel (Plane {pl})", font=dict(size=20))
+            )
+            figs[f"TP_count_channel_plane{pl}"] = fig
 
-            figs[f"TP_count_channel_{pl}"] = fig
+    # --- TP count comparison between planes ---
+    def tp_count_planes(df):
+        valid_groups = [g for g in groups if df['element'].isin(groups[g]).any()]
+        subplot_titles = [f"{['U','V'][pl]} plane - {name}" 
+                          for pl in [0,1] for name in valid_groups]
+        fig = make_subplots(rows=2, cols=len(valid_groups), subplot_titles=subplot_titles)
+        has_data = False
+        colors, color_map = px.colors.qualitative.Dark24, {}
 
-    def tp_count_planes(df_tp):
-        fig = make_subplots(rows=2, cols=2, 
-            subplot_titles=["U plane - TDE", "V plane - TDE", "U plane - BDE", "V plane - BDE"],
-            horizontal_spacing=0.1
-        )
+        for i, pl in enumerate([0,1]):
+            for j, group_name in enumerate(valid_groups):
+                for ele in groups[group_name]:
+                    key = f"{element_to_det.get(ele,'Unknown')}_{ele}"
+                    color_map.setdefault(key, colors[len(color_map) % len(colors)])
 
-        # Get a large color palette
-        colors = px.colors.qualitative.Dark24
-        color_map = {}
+                    col_num, ind_num = [], []
+                    for trg in triggers:
+                        df_trg = df[df['trigger']==trg]
+                        col_tp = df_trg[(df_trg.plane==2) & (df_trg.element==ele)]
+                        ind_tp = df_trg[(df_trg.plane==pl) & (df_trg.element==ele)]
+                        col_num.append(len(col_tp)); ind_num.append(len(ind_tp))
 
-        for i, pl in enumerate(ind_plane):
-            for k, (name, crp) in enumerate([('TDE', tde), ('BDE', bde)]):
-                
-                for j, ele in enumerate(crp):
-
-                    key = f"{name}_{ele}"   #Unique id for crp and if it is in tde or bde
-
-                    if key not in color_map:
-                        color_map[key] = colors[len(color_map) % len(colors)]
-
-                    col_num = []
-                    ind_num = []
-                    trigger = np.unique(df_tp['trigger'].to_numpy())
-
-                    for trg in trigger:
-                        df = df_tp[df_tp['trigger'] == trg]
-
-                        col_tp = df[(df.plane == 2) & (df.element == ele)]
-                        ind_tp = df[(df.plane == pl) & (df.element == ele)]
-
-                        col_num.append(len(col_tp))
-                        ind_num.append(len(ind_tp))
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=col_num,
-                            y=ind_num,
-                            mode='markers',
-                            marker=dict(size=7, color=color_map[key]),
-                            opacity=0.85,
-                            name=f'CRP {ele}',  # make legend clear
-                            showlegend=i==0
-                        ),
-                        row=k+1,
-                        col=i+1
-                    )
-
-        fig.add_annotation(
-            text="Collection TP Count",
-            showarrow=False,
-            xref="paper",
-            yref="paper",
-            x=0.5,
-            y=-0.15,
-            font=dict(size=16),
-            textangle=0
-        )
-
-        fig.add_annotation(
-            text="Induction TP Count",
-            showarrow=False,
-            xref="paper",
-            yref="paper",
-            x=-0.09,
-            y=0.5,
-            font=dict(size=16),
-            textangle=-90
-        )
-
-        fig.update_layout(
-            width=1800,
-            height=800,
-            title=dict(text=f"Run {df_tp['run'].iloc[0]}: TP Count Comparison between planes", font=dict(size=20)),
-            showlegend=True
-        )
-
-        figs[f"TP_counts_comparison_planes"] = fig
-
-    def adc_correlation(df_tp):
-        
-        bin_x = np.arange(0, 15000, 150)
-        bin_y = np.arange(0, 15000, 150)
-       
-        for pl in ind_plane:
-
-            fig = make_subplots(rows=2, cols=2, 
-                                subplot_titles=[f"CRP {ele}" for ele in elements])
-            for i, ele in enumerate(elements):
-
-                all_valid_data = []
-                col_adc = []
-                ind_adc = []
-                trigger = np.unique(df_tp['trigger'].to_numpy())
-
-                # Accumulate data across all triggers
-                for trg in trigger:
-                    df = df_tp[df_tp['trigger'] == trg]
-                    if df.empty:
-                        print(f"No entries for Plane {pl} of CRP {ele}")
+                    if sum(col_num)+sum(ind_num)==0:
                         continue
+                    
+                    fig.add_trace(go.Scatter(
+                        x=col_num, y=ind_num, mode='markers', marker=dict(size=10, color=color_map[key]),
+                        opacity=0.85, name=f'CRP {ele}', showlegend=i==0
+                    ), row=i+1, col=j+1)
+                    has_data = True
 
+        if has_data:
+            fig.add_annotation(
+                text="Collection TP Count", showarrow=False, xref="paper", yref="paper",
+                x=0.5, y=-0.15, font=dict(size=16), textangle=0)
 
-                    col_tp = df[(df.plane == 2) & (df.element == ele)]
-                    ind_tp = df[(df.plane == pl) & (df.element == ele)]
+            fig.add_annotation(
+                text="Induction TP Count", showarrow=False, xref="paper", yref="paper",
+                x=-0.095, y=0.5, font=dict(size=16), textangle=-90)
+            
+            fig.update_layout(width=1800, height=800,
+                              title=dict(text=f"Run {df['run'].iloc[0]}: TP Count Comparison by Plane", font=dict(size=20)),
+                              showlegend=True)
+            figs["TP_counts_comparison_planes"] = fig
 
+    # --- ADC correlation between planes ---
+    def adc_correlation(df):
+        bins = np.arange(0,15000,150)
+        for pl in [0,1]:
+            fig = make_subplots(rows=2, cols=2, subplot_titles=[f"CRP {ele}" for ele in elements])
+            fig_has_data = False
+
+            for i, ele in enumerate(elements):
+                col_adc, ind_adc = [], []
+                for trg in triggers:
+                    df_trg = df[df['trigger']==trg]
+                    col_tp = df_trg[(df_trg.plane==2) & (df_trg.element==ele)]
+                    ind_tp = df_trg[(df_trg.plane==pl) & (df_trg.element==ele)]
                     col_adc.extend(col_tp['adc_integral'].to_numpy())
                     ind_adc.extend(ind_tp['adc_integral'].to_numpy())
 
-                # Convert to numpy arrays and ensure same length
-                col_adc = np.array(col_adc)
-                ind_adc = np.array(ind_adc)
+                if not col_adc or not ind_adc: continue
                 min_len = min(len(col_adc), len(ind_adc))
-                col_adc = col_adc[:min_len]
-                ind_adc = ind_adc[:min_len]
+                col_adc, ind_adc = np.array(col_adc[:min_len]), np.array(ind_adc[:min_len])
+                H, xedges, yedges = np.histogram2d(col_adc, ind_adc, bins=[bins, bins])
+                H_log = np.log10(H, out=np.zeros_like(H), where=H>0)
+                z = np.where(H>0, H_log, np.nan)
 
-                if min_len == 0:
-                    continue
+                fig.add_trace(go.Heatmap(z=z.T, x=xedges, y=yedges, colorscale='Viridis', coloraxis='coloraxis'), 
+                              row=i//2+1, col=i%2+1)
+                fig_has_data = True
 
-                # 2D histogram and log transform
-                H, xedges, yedges = np.histogram2d(col_adc, ind_adc, bins=[bin_x, bin_y])
-                with np.errstate(divide='ignore'):
-                    H_log = np.log10(H)
-                H_masked = ma.masked_where(H == 0, H_log)
-                z = H_masked.filled(np.nan)
+            if fig_has_data:
 
-                if H_masked.count() > 0:
-                    all_valid_data.append(H_masked.compressed())
+                fig.add_annotation(
+                    text="Collection ADC", showarrow=False, xref="paper", yref="paper",
+                    x=0.5, y=-0.15, font=dict(size=16), textangle=0)
 
-                    row = i // 2 + 1
-                    col = i % 2 + 1
-
-                    fig.add_trace(go.Heatmap(
-                        z=z.T,
-                        x=xedges,
-                        y=yedges,
-                        colorscale='Viridis',
-                        coloraxis='coloraxis',
-                        hoverongaps=False
-                    ),
-                    row=row,
-                    col=col
-                    )
-
-                if all_valid_data:
-                    all_valid_data = np.concatenate(all_valid_data)
-                    global_zmin = all_valid_data.min()
-                    global_zmax = all_valid_data.max()
-                else:
-                    global_zmin = 0
-                    global_zmax = 1
-
-
-            fig.add_annotation(
-                text="Collection ADC",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=-0.15,
-                font=dict(size=16),
-                textangle=0
-            )
-
-            fig.add_annotation(
-                text=f"Induction ADC (Plane {pl})",
-                showarrow=False,
-                xref="paper",
-                yref="paper",
-                x=-0.09,
-                y=0.5,
-                font=dict(size=16),
-                textangle=-90
-            )   
-
-            fig.update_layout(
-                coloraxis=dict(
-                    colorscale='Viridis',
-                    colorbar=dict(title='log₁₀(Density)'),
-                    cmin=global_zmin,
-                    cmax=global_zmax,
-                ),
-                width=900,
-                height=600,
-                title=dict(text=f"Run {df_tp['run'].iloc[0]}: ADC Correlation between planes", font=dict(size=20)),
-                showlegend=False
-            )
-
-            figs[f"ADC_correlation_ind_planes_{pl}"] = fig
-
+                fig.add_annotation(
+                    text=f"Induction ADC (Plane {pl})", showarrow=False, xref="paper", yref="paper",
+                    x=-0.09, y=0.5, font=dict(size=16), textangle=-90)
+                   
+                fig.update_layout(
+                    coloraxis=dict(colorscale='Viridis', colorbar=dict(title='log₁₀(Density)')),
+                    width=900, height=600,
+                    title=dict(text=f"Run {df['run'].iloc[0]}: ADC Correlation between planes (Plane {pl})", font=dict(size=20)),
+                    showlegend=False
+                )
+                figs[f"ADC_correlation_ind_planes_{pl}"] = fig
 
     tp_rate_channel(df_tp)
     tp_count_planes(df_tp)
     adc_correlation(df_tp)
-
+    
     return figs
 
 def save_plot(k_v_tuple, extension, save_dir):
@@ -334,7 +233,14 @@ def main(filenames, nrecords, nworkers, save_dir):
             n_processed_records += 1
 
     df_dict = dfc.concatenate_dataframes(df_dict)
-    df_tp = df_dict['trgd_kDAQ_kTriggerPrimitive']
+
+    if "trgd_kDAQ_kTriggerPrimitive" in df_dict:
+        print("Constructing TP dataframe from TR")
+        df_tp = df_dict['trgd_kDAQ_kTriggerPrimitive']
+    elif "trgh_kDAQ_kTriggerPrimitive" in df_dict:
+        print("Constructing TP dataframe from TPStream")
+        df_tp = df_dict['trgh_kDAQ_kTriggerPrimitive']
+
     df_tp = df_tp.reset_index()
 
     print("Structure of df_tp:", df_tp.head())
