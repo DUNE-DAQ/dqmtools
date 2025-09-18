@@ -15,6 +15,10 @@ try:
     from matplotlib.colors import Normalize
     from matplotlib import cm
 
+    from PIL import Image
+    from matplotlib.colors import Normalize
+    from matplotlib import cm
+
 except ModuleNotFoundError as err:
     print(err)
     print("\n\n")
@@ -60,11 +64,18 @@ def plot_WIBEth_adc_map(df_dict,tpc_det_key,ele,plane,
     offset_var = f'adc_{offset_type}'
     
     tpc_wvfm_key = "detw"+tpc_det_key[4:]
+    offset_var = f'adc_{offset_type}'
+    
+    tpc_wvfm_key = "detw"+tpc_det_key[4:]
 
     if tpc_det_key not in df_dict.keys():
         print(f"Can not make plots for {tpc_det_key}, no DATA found")
         return empty_plot()
+        return empty_plot()
 
+    if tpc_wvfm_key not in df_dict.keys():
+        print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
+        return empty_plot()
     if tpc_wvfm_key not in df_dict.keys():
         print(f"Can not make plots for {tpc_wvfm_key}, no DATA found")
         return empty_plot()
