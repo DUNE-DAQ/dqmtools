@@ -1,3 +1,4 @@
+from importlib import resources
 import os
 import numpy as np
 import pandas as pd
@@ -108,15 +109,13 @@ def df_channel_map(df):
             df['endpoint'] = df.apply(lambda x: int(find_endpoint(x['src_id']))-100, axis=1)
             df.columns = ['src_id','channel','waveforms','endpoint']
 
-    share_path = os.environ.get('DQMTOOLS_SHARE')
-    path = share_path + "/config/APAchannelmap.txt"
-    
-    map_channel = pd.read_csv(path, sep="\s+", header=None).astype('int')
-    map_channel.columns = ["endpoint", "link", "channel", "position"]
-    map_channel["col_position"] = map_channel["position"]//10
-    map_channel["row_position"] = map_channel["position"] - 10*map_channel["col_position"]
-    map_channel["real_col_position"] = 15 - map_channel["col_position"] 
+    with resources.files("dqmtools").joinpath("data/channelmaps/APAchannelmap.txt").open("r", encoding="utf-8") as mapfile:
+        map_channel = pd.read_csv(mapfile, sep="\s+", header=None).astype('int')
+        map_channel.columns = ["endpoint", "link", "channel", "position"]
+        map_channel["col_position"] = map_channel["position"]//10
+        map_channel["row_position"] = map_channel["position"] - 10*map_channel["col_position"]
+        map_channel["real_col_position"] = 15 - map_channel["col_position"]
 
-    df = pd.merge(df, map_channel, how="inner", on=["endpoint", "channel"])
+        df = pd.merge(df, map_channel, how="inner", on=["endpoint", "channel"])
 
     return df
