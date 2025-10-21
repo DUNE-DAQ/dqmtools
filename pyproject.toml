@@ -44,7 +44,7 @@ write_dqm_dataframes = "dqmtools.bin.write_dqm_dataframes:main"
 "*" = ["*"]
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=short --cov=runconftools --cov=src/runconftools tests/"  # omitted --cov-report=html to avoid suppressing table to stdout
+addopts = "-v --tb=short --cov=dqmtools --cov=src/dqmtools tests/"  # omitted --cov-report=html to avoid suppressing table to stdout
 
 [tool.coverage.run]
 source = ["dqmtools"]
