@@ -1,0 +1,91 @@
+name: Request to add a DAQ asset file
+description: File a request to add an asset file to the dunedaq.opensciencegrid.org area on cvmfs.
+title: "[Add Asset]: "
+assignees:
+  - andrewmogan
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you encounter problems with this form, contact software coordination.
+  - type: input
+    id: description
+    attributes:
+      label: Description of the asset file
+      description: Provide a 1-2 sentence description of the asset file, including the source of the data in the file (e.g., DAPHNE), if applicable.
+      placeholder: Sample TDE Ethernet data generated from run 39324 at NP02.
+    validations:
+      required: true
+  - type: dropdown
+    id: label
+    attributes:
+      label: File label
+      description: File label
+      options:
+        - WIBEth
+        - TDEEth
+        - DAPHNE
+        - Other (please specify in the notes at the bottom of this form)
+  - type: input
+    id: location
+    attributes:
+      label: Location of the file
+      description: Provide the absolute path to the asset file, including the node name. Make sure it's readable by others so we can copy it.
+      placeholder: daq.fnal.gov:/home/nfs/user/my_asset_file.bin
+    validations:
+      required: true
+  - type: input
+    id: creator_name
+    attributes:
+      label: Name of the file creator
+      description: Provide the name of the person who created the file.
+  - type: dropdown
+    id: data_or_mc
+    attributes:
+      label: Data or MC
+      description: Was this file generated using real detector data, or simulation (i.e., Monte Carlo)?
+      options:
+        - Data
+        - Monte Carlo
+    validations:
+      required: true
+  - type: input
+    id: run_number
+    attributes:
+      label: Run number
+      description: If applicable, provide the run number from which the data in the file was taken.
+      placeholder: "12345"
+  - type: input
+    id: size
+    attributes:
+      label: Number and size of file(s)
+      description: Provide the number of asset files and their sizes. Note that asset files shouldn’t exceed more than a couple hundred MB in size; cvmfs responds badly to files larger than that.
+      placeholder: 4 files, each 232 KB
+    validations:
+      required: true
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: Subsystem
+      description: Select the corresponding subsystem.
+      options:
+        - trigger
+        - readout
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: File format
+      description: Provide the file format.
+      options:
+        - binary
+        - text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Tell us why this file is useful.
+      placeholder: Used for testing PDS TP generation in emulated-data systems.
