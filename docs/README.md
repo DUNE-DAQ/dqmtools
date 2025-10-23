@@ -13,7 +13,7 @@ source env.sh
 # Note: we need to install some python reqs, and have to get chrome for static plots to work ...
 git clone https://github.com/DUNE-DAQ/dqmtools.git
 cd dqmtools
-pip install -U .
+pip install -e .
 plotly_get_chrome
 ```
 After these steps everything should be ready and one can run
