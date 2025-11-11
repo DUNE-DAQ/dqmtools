@@ -1,0 +1,65 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0"]
+
+[project]
+name = "dqmtools"
+description = "Tools for on-the-spot Data Quality Monitoring"
+version = "0.5.1"
+readme = "docs/README.md"
+urls = { Homepage = "https://github.com/DUNE-DAQ/dqmtools" }
+requires-python = ">=3.6"
+dependencies = [
+	     "numpy",
+	     "pandas",
+	     "tables",
+	     "tabulate",
+	     "plotly",
+	     "tqdm",
+	     "kaleido",
+	     ]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+dqm_analyzer = "dqmtools.bin.dqm_analyzer:main"
+dqm_display = "dqmtools.bin.dqm_display:main"
+dqm_pds_display = "dqmtools.bin.dqm_pds_display:main"
+dqm_pds = "dqmtools.bin.dqm_pds:main"
+dqm_plotter = "dqmtools.bin.dqm_plotter:main"
+dqm_wib_tests = "dqmtools.bin.dqm_wib_tests:main"
+dump_pds_ana_info = "dqmtools.bin.dump_pds_ana_info:main"
+read_dqm_dataframes = "dqmtools.bin.read_dqm_dataframes:main"
+write_dqm_dataframes = "dqmtools.bin.write_dqm_dataframes:main"
+
+[tool.setuptools.package-data]
+"*" = ["*"]
+
+[tool.pytest.ini_options]
+addopts = "-v --tb=short --cov=dqmtools --cov=src/dqmtools tests/"  # omitted --cov-report=html to avoid suppressing table to stdout
+
+[tool.coverage.run]
+source = ["dqmtools"]
+omit = ["tests/*", "scripts/*"]
+
+# * See https://docs.astral.sh/ruff/rules/ for details on Ruff's linting options
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # check for errors using PyFlakes
+    "I",    # best practices for import calls
+    "UP",   # suggestions for code modernization
+    "RUF",  # built-in Ruff warnings
+    "R",    # refactoring suggestions
+]
+ignore = [
+    "E501", # Don't enforce line lengths within a linting context
+]
