@@ -31,7 +31,6 @@ where = ["src"]
 
 [project.scripts]
 dqm_analyzer = "dqmtools.bin.dqm_analyzer:main"
-dqm_display = "dqmtools.bin.dqm_display:main"
 dqm_pds_display = "dqmtools.bin.dqm_pds_display:main"
 dqm_pds = "dqmtools.bin.dqm_pds:main"
 dqm_plotter = "dqmtools.bin.dqm_plotter:main"
