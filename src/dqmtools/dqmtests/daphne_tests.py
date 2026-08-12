@@ -79,11 +79,11 @@ class CheckADCData_DAPHNE(DQMTest):
         means = np.array(df_dict[self.det_data_key]["adc_mean"])
         rmss  = np.array(df_dict[self.det_data_key]["adc_rms"])
 
-        if np.any(means) == 0 or np.any(rmss) == 0:
+        if np.any(means == 0) or np.any(rmss == 0):
 
             n_bad_means = len(means[np.where(means == 0)])
             n_bad_rmss  = len(rmss[np.where(rmss == 0)])
-            return DQMTestResult(DQMResultEnum.BAD, f'{np.max(n_bad_means, n_bad_rmss)} channels have problems')
+            return DQMTestResult(DQMResultEnum.BAD, f'{max(n_bad_means, n_bad_rmss)} channels have problems')
             
         else:
             return DQMTestResult(DQMResultEnum.OK,f'OK')
