@@ -66,7 +66,7 @@ class CheckWIBEth_Header_Value(DQMTest):
             return DQMTestResult(DQMResultEnum.WARNING,f'Could not find {self.det_head_key} in DataFrame dict.')
         
         df_tmp = df_dict[self.det_head_key].rename(columns={f"{self.header_field}_vals":"vals",f"{self.header_field}_idx":"idx"})
-        df_tmp["n_empty"] = df_tmp.apply(lambda x: (1 if x.vals == [] else 0), axis=1)
+        df_tmp["n_empty"] = df_tmp.apply(lambda x: (1 if len(x.vals) == 0 else 0), axis=1)
         n_empty_err = df_tmp["n_empty"].sum()
         if n_empty_err != 0:
             print(df_tmp[["vals","idx"]])
