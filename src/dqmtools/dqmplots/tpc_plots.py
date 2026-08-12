@@ -106,7 +106,7 @@ def plot_TPCData_by_channel(df_dict,var,det_keys,
 
 def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
                      offset=True,offset_type="median",
-                     make_static=False,make_tp_overlay=False,
+                     make_static=False,make_tp_overlay=False,make_ta_overlay=False,
                      orientation="vertical",colorscale='plasma',color_range=(-256,256),
                      run=None,trigger=None,seq=None):
 
@@ -258,52 +258,94 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
         xaxis_title=xaxis_title,
     )
 
-    #if we aren't doing the TP overlay, we are done
-    if not make_tp_overlay:
-        return fig
+    #TP overlay
+    if make_tp_overlay and "trgd_kDAQ_kTriggerPrimitive" in df_dict:
 
-    #if we are, let's grab the TPs
-    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
+        df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
-    df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
-    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+        df_tmp = df_tmp.loc[(df_tmp["element"]==element_id)&(df_tmp["plane"]==plane)]
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
-    if len(df_tmp)==0:
-        return fig
+        if len(df_tmp)!=0:
 
-    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
-    df_tmp = df_tmp.reset_index()
+            df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+            df_tmp = df_tmp.reset_index()
 
-    df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
-    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
-    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
+            df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+            df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+            df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
 
-    df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_end_trg_sub}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
+            df_tmp["marker_string"] = df_tmp.apply(lambda x: f"start: {x.time_start_trg_sub}<br>peak: {x.time_peak_trg_sub}<br>end: {x.time_end_trg_sub}<br>channel: {x.channel}<br>sum adc: {x.adc_integral}<br>peak adc: {x.adc_peak}",axis=1)
 
-    if orientation=="horizontal":
-        xdata = df_tmp["time_peak_trg_sub"]
-        ydata = df_tmp["channel"]
-    else:
-        ydata = df_tmp["time_peak_trg_sub"]
-        xdata = df_tmp["channel"]
+            if orientation=="horizontal":
+                xdata = df_tmp["time_peak_trg_sub"]
+                ydata = df_tmp["channel"]
+            else:
+                ydata = df_tmp["time_peak_trg_sub"]
+                xdata = df_tmp["channel"]
 
-    tp_fig=go.Scattergl(
-        x=xdata,
-        y=ydata,
-        mode='markers', name="Trigger Primitives",
-        marker=dict(size=df_tmp["adc_integral"],
-                    sizemode='area',
-                    sizeref=2.*max(df_tmp['adc_integral'])/(12**2),sizemin=3,
-                    color=df_tmp['adc_peak'], #set color equal to a variable
-                    colorscale="delta", # one of plotly colorscales
-                    cmin = 0,
-                    cmax = zmax,
-                    showscale=True,colorbar=dict( x=1.12 )
-                    ),
-        text=df_tmp["marker_string"],
-    )
+            tp_fig=go.Scattergl(
+                x=xdata,
+                y=ydata,
+                mode='markers', name="Trigger Primitives",
+                marker=dict(size=df_tmp["adc_integral"],
+                            sizemode='area',
+                            sizeref=2.*max(df_tmp['adc_integral'])/(12**2),sizemin=3,
+                            color=df_tmp['adc_peak'], #set color equal to a variable
+                            colorscale="delta", # one of plotly colorscales
+                            cmin = 0,
+                            cmax = zmax,
+                            showscale=True,colorbar=dict( x=1.12 )
+                            ),
+                text=df_tmp["marker_string"],
+            )
 
-    fig.add_trace(tp_fig)
+            fig.add_trace(tp_fig)
+
+    #TA overlay
+    if make_ta_overlay and "trgd_kDAQ_kTriggerActivity" in df_dict:
+
+        df_ta = df_dict["trgd_kDAQ_kTriggerActivity"]
+
+        df_ta = df_ta.loc[(df_ta["element"]==element_id)&(df_ta["plane"]==plane)]
+        df_ta = df_ta.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+        if len(df_ta)!=0:
+
+            df_ta, index = dfc.select_record(df_ta,run,trigger,seq)
+            df_ta = df_ta.reset_index()
+
+            for col in ["time_start","time_end","time_peak"]:
+                df_ta[col] = df_ta[col].astype(np.int64) - df_ta["trigger_timestamp_dts"]
+
+            border_time = 16
+            border_channel = 0.5
+
+            for ta_idx, ta in df_ta.iterrows():
+
+                text = (f"start: {ta.time_start}<br>peak: {ta.time_peak}<br>end: {ta.time_end}<br>"
+                        f"ch_start: {ta.channel_start}<br>ch_peak: {ta.channel_peak}<br>ch_end: {ta.channel_end}<br>"
+                        f"peak adc: {ta.adc_peak}<br>adc_integral: {ta.adc_integral}")
+
+                time_points = [ta.time_start-border_time, ta.time_start-border_time,
+                               ta.time_end+border_time, ta.time_end+border_time, ta.time_start-border_time]
+                channel_points = [ta.channel_start-border_channel, ta.channel_end+border_channel,
+                                  ta.channel_end+border_channel, ta.channel_start-border_channel, ta.channel_start-border_channel]
+
+                if orientation=="horizontal":
+                    xdata, ydata = time_points, channel_points
+                else:
+                    xdata, ydata = channel_points, time_points
+
+                fig.add_trace(go.Scatter(
+                    name=f"ta[{ta_idx}]",
+                    text=text,
+                    x=xdata, y=ydata,
+                    fill="toself",
+                    line=dict(color="RoyalBlue", width=2),
+                    fillcolor="LightSkyBlue",
+                    opacity=0.5,
+                ))
 
     return fig
 
@@ -435,7 +477,7 @@ def plot_TPC_adc_map_mpl(df_dict, det_keys, ele, plane,
 
 def plot_TPC_waveform(df_dict,det_keys,channel,
                       offset=False,offset_type='median',
-                      overlay_tps=False,
+                      make_tp_overlay=False,make_ta_overlay=False,
                       run=None,trigger=None,seq=None):
 
     offset_var = f'adc_{offset_type}'
@@ -486,35 +528,52 @@ def plot_TPC_waveform(df_dict,det_keys,channel,
                       yaxis_title=yaxis_title,
                       title=f"Waveform for channel {channel}")
 
-    #if we're not overlaying TPs, just leave
-    if not overlay_tps:
-        return fig
+    #TP overlay
+    if make_tp_overlay and "trgd_kDAQ_kTriggerPrimitive" in df_dict:
 
-    #if we are, let's grab the TPs
+        df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
 
-    if "trgd_kDAQ_kTriggerPrimitive" not in df_dict:
-        return fig
+        idx_names = df_tmp.index.names
+        df_tmp = df_tmp.reset_index()
+        df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
+        df_tmp = df_tmp.set_index(idx_names)
 
-    df_tmp = df_dict["trgd_kDAQ_kTriggerPrimitive"]
+        df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
 
-    idx_names = df_tmp.index.names
-    df_tmp = df_tmp.reset_index()
-    df_tmp = df_tmp.loc[df_tmp["channel"]==channel]
-    df_tmp = df_tmp.set_index(idx_names)
+        if len(df_tmp)!=0:
 
-    df_tmp = df_tmp.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+            df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
+            df_tmp = df_tmp.reset_index()
+            df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
+            df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
+            df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
 
-    if len(df_tmp)==0:
-        return fig
+            for tp_idx, tp in df_tmp.iterrows():
+                fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)
+                fig.add_vline(x=tp["time_peak_trg_sub"], line_width=1, line_dash="dash", line_color="red")
 
-    df_tmp, index = dfc.select_record(df_tmp,run,trigger,seq)
-    df_tmp = df_tmp.reset_index()
-    df_tmp["time_start_trg_sub"] = df_tmp.apply(lambda x: x.time_start - x.trigger_timestamp_dts,axis=1)
-    df_tmp["time_peak_trg_sub"] = df_tmp["time_start_trg_sub"]+df_tmp["samples_to_peak"]*32
-    df_tmp["time_end_trg_sub"] = df_tmp["time_start_trg_sub"]+(df_tmp["samples_over_threshold"]-1)*32
+    #TA overlay
+    if make_ta_overlay and "trgd_kDAQ_kTriggerActivity" in df_dict:
 
-    for index, tp in df_tmp.iterrows():
-        fig.add_vrect(tp['time_start_trg_sub'], tp['time_end_trg_sub'], line_width=0, fillcolor="red", opacity=0.2)
-        fig.add_vline(x=tp["time_peak_trg_sub"], line_width=1, line_dash="dash", line_color="red")
+        df_ta = df_dict["trgd_kDAQ_kTriggerActivity"]
+
+        idx_names = df_ta.index.names
+        df_ta = df_ta.reset_index()
+        df_ta = df_ta.loc[(df_ta["channel_start"]<=channel)&(df_ta["channel_end"]>=channel)]
+        df_ta = df_ta.set_index(idx_names)
+
+        df_ta = df_ta.merge(df_dict["frh"]["trigger_timestamp_dts"],left_index=True,right_index=True)
+
+        if len(df_ta)!=0:
+
+            df_ta, index = dfc.select_record(df_ta,run,trigger,seq)
+            df_ta = df_ta.reset_index()
+
+            for col in ["time_start","time_end","time_peak"]:
+                df_ta[col] = df_ta[col].astype(np.int64) - df_ta["trigger_timestamp_dts"]
+
+            for ta_idx, ta in df_ta.iterrows():
+                fig.add_vrect(ta['time_start'], ta['time_end'], line_width=0, fillcolor="blue", opacity=0.2)
+                fig.add_vline(x=ta["time_peak"], line_width=1, line_dash="dash", line_color="blue")
 
     return fig
