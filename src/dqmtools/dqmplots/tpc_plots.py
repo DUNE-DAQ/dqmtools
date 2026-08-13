@@ -176,13 +176,13 @@ def plot_TPC_adc_map(df_dict,det_keys,ele,plane,
     df_tmp = df_reindexed
 
     if orientation=="horizontal":
-        xdata = df_tmp.iloc[0]["timestamps_trg_sub"]
+        xdata = common_time
         ydata = df_tmp["channel"].values
         zdata = np.vstack(df_tmp["adcs_full"].values)
         yaxis_title='Offline Channel'
         xaxis_title='DTS time ticks (16ns)'
     else:
-        ydata = df_tmp.iloc[0]["timestamps_trg_sub"]
+        ydata = common_time
         xdata = df_tmp["channel"].values
         zdata = np.vstack(df_tmp["adcs_full"].values).T
         xaxis_title='Offline Channel'
@@ -410,10 +410,10 @@ def prep_TPC_adc_map(df_dict, det_keys, ele, plane,
     df_tmp = df_reindexed
 
     if orientation == "horizontal":
-        xdata, ydata = df_tmp.iloc[0]["timestamps_trg_sub"], df_tmp["channel"].values
+        xdata, ydata = common_time, df_tmp["channel"].values
         zdata = np.vstack(df_tmp["adcs_full"].values)
     else:
-        ydata, xdata = df_tmp.iloc[0]["timestamps_trg_sub"], df_tmp["channel"].values
+        ydata, xdata = common_time, df_tmp["channel"].values
         zdata = np.vstack(df_tmp["adcs_full"].values).T
 
     zmin, zmax = color_range
