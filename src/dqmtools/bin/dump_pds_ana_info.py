@@ -8,7 +8,7 @@ import daqdataformats
 
 from rawdatautils.unpack.dataclasses import *
 import dqmtools.dataframe_creator as dfc
-from hdf5libs import HDF5RawDataFile
+import rawdatafilelibs
 import h5py
 
 import numpy as np
@@ -67,7 +67,7 @@ def main(input_dir, run, nrecords, nfiles, cathode, membrane):
     for file in files_to_process:
 
         file_id   = file.split("_")[3]
-        h5_file   = HDF5RawDataFile(input_dir+file)
+        h5_file   = rawdatafilelibs.open(input_dir+file)
         records   = h5_file.get_all_record_ids()
         n_records = len(records)
         print(f"Processing file -- {file}")
@@ -85,7 +85,7 @@ def main(input_dir, run, nrecords, nfiles, cathode, membrane):
 
             with h5py.File(h5_file.get_file_name(), 'r') as f:
                 record_index = dfc.RecordDataBase(run=f.attrs["run_number"],trigger=r[0],sequence=r[1])
-            sids = h5_file.get_source_ids(r)
+            sids = h5_file.get_fragment_source_ids(r) | {h5_file.get_record_header_source_id(r)}
 
             for sid in sids:
 

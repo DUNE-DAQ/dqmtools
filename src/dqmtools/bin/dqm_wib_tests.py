@@ -6,7 +6,7 @@ from dqmtools.dqmtools import *
 from dqmtools.dqmtests import *
 from dqmtools.dqmplots import *
 
-import hdf5libs
+import rawdatafilelibs
 import os
 import pytz
 
@@ -73,7 +73,7 @@ def main(filenames, output_dir, nrecords, maxfiles, nworkers, hd, imgtype):
     for filename in filenames:
         print(f'Processing file {filename}.')
         
-        h5_file = hdf5libs.HDF5RawDataFile(filename)
+        h5_file = rawdatafilelibs.open(filename)
         records = h5_file.get_all_record_ids()
 
         if nrecords==-1 or nrecords > (n_processed_records+len(records)):

@@ -1,6 +1,6 @@
 import rawdatautils.unpack.utils
 import detdataformats
-import hdf5libs
+import rawdatafilelibs
 import h5py
 
 import numpy as np
@@ -130,8 +130,8 @@ def process_source_id(h5_file, sid, record_index, op_env, ana_data_prescale, wvf
     return_dict = sid_unpacker.get_all_data(sid)
 
     if(sid.subsystem==daqdataformats.SourceID.Subsystem.kTRBuilder):
-        trh = h5_file.get_trh(record_index.trigger,record_index.sequence)
-        n_frags = len(h5_file.get_fragment_dataset_paths(record_index.trigger,record_index.sequence))
+        trh = h5_file.get_trh((record_index.trigger,record_index.sequence))
+        n_frags = len(h5_file.get_fragment_source_ids((record_index.trigger,record_index.sequence)))
         return (return_dict | rawdatautils.unpack.utils.TriggerRecordHeaderUnpacker().get_all_data((trh,n_frags)) )
 
     if(sid.subsystem==daqdataformats.SourceID.Subsystem.kDetectorReadout or sid.subsystem==daqdataformats.SourceID.Subsystem.kTrigger):
@@ -163,7 +163,7 @@ def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_d
                                          record_index,
                                          op_env,
                                          ana_data_prescale,
-                                         wvfm_data_prescale): sid for sid in h5_file.get_source_ids(rid) }
+                                         wvfm_data_prescale): sid for sid in h5_file.get_fragment_source_ids(rid) | {h5_file.get_record_header_source_id(rid)} }
         for future in concurrent.futures.as_completed(future_to_sid):
             sid = future_to_sid[future]
             res = future.result()

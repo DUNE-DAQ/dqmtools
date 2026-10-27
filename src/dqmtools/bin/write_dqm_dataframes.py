@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import dqmtools.dataframe_creator as dfc
-import hdf5libs
+import rawdatafilelibs
 import os
 import click
 
@@ -38,7 +38,7 @@ def main(input_filenames, output_filename, force, append, nrecords, ana_data_pre
     for filename in input_filenames:
         print(f'Processing file {filename}.')
         
-        h5_file = hdf5libs.HDF5RawDataFile(filename)
+        h5_file = rawdatafilelibs.open(filename)
         records = h5_file.get_all_record_ids()
 
         if nrecords == -1 or nrecords > (n_processed_records+len(records)):

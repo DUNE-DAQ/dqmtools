@@ -7,7 +7,7 @@ from dqmtools.dqmtests import *
 from dqmtools.dqmplots import *
 
 import h5py
-import hdf5libs
+import rawdatafilelibs
 
 import concurrent.futures
 import os
@@ -70,7 +70,7 @@ def main(input_data, output_dir, nworkers, nskip, nrecords, imgtype, component, 
 
     print(f"Operational environment: {op_env}")
 
-    h5_file = hdf5libs.HDF5RawDataFile(filename)
+    h5_file = rawdatafilelibs.open(filename)
     records = h5_file.get_all_record_ids()
 
     if len(records) == 0:
