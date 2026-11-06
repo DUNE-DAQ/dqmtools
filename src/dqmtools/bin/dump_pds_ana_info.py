@@ -9,7 +9,6 @@ import daqdataformats
 from rawdatautils.unpack.dataclasses import *
 import dqmtools.dataframe_creator as dfc
 import rawdatafilelibs
-import h5py
 
 import numpy as np
 try:
@@ -83,8 +82,7 @@ def main(input_dir, run, nrecords, nfiles, cathode, membrane):
 
         for r in records_to_process:
 
-            with h5py.File(h5_file.get_file_name(), 'r') as f:
-                record_index = dfc.RecordDataBase(run=f.attrs["run_number"],trigger=r[0],sequence=r[1])
+            record_index = dfc.RecordDataBase(run=h5_file.metadata.run_number,trigger=r[0],sequence=r[1])
             sids = h5_file.get_fragment_source_ids(r) | {h5_file.get_record_header_source_id(r)}
 
             for sid in sids:

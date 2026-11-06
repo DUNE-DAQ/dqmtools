@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-import rawdatafilelibs
-
 import os
-import detdataformats
+
 import click
+import detdataformats
+import rawdatafilelibs
 
 from daqdataformats import FragmentType
 from rawdatautils.unpack.daphne import *
@@ -60,7 +60,8 @@ def dhf5_reader(path, file_list):
             pds_geo_ids = list(h5_file.get_geo_ids_for_subdetector(r, detdataformats.DetID.string_to_subdetector(det)))
             
             for gid in pds_geo_ids:
-                frag = h5_file.get_frag(r, h5_file.geo_id_map.get_source_ids(detdataformats.GeoID.decode(gid))[0])
+                sid = h5_file.geo_id_map.get_source_ids(detdataformats.GeoID.decode(gid))[0]
+                frag = h5_file.get_frag(r, sid)
                 #scr_id, trigger, channels, adcs, timestamps = extract_fragment_info(frag)
                 scr_id, trigger, channels, adcs= extract_fragment_info(frag)
                 

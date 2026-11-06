@@ -1,6 +1,5 @@
 import rawdatautils.unpack.utils
 import detdataformats
-import rawdatafilelibs
 import h5py
 
 import numpy as np
@@ -157,13 +156,14 @@ def process_record(h5_file,rid,df_dict,MAX_WORKERS=10,ana_data_prescale=1,wvfm_d
         op_env = f.attrs["operational_environment"]
     
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        sids = h5_file.get_fragment_source_ids(rid) | {h5_file.get_record_header_source_id(rid)}
         future_to_sid = {executor.submit(process_source_id,
                                          h5_file,
                                          sid,
                                          record_index,
                                          op_env,
                                          ana_data_prescale,
-                                         wvfm_data_prescale): sid for sid in h5_file.get_fragment_source_ids(rid) | {h5_file.get_record_header_source_id(rid)} }
+                                         wvfm_data_prescale): sid for sid in sids }
         for future in concurrent.futures.as_completed(future_to_sid):
             sid = future_to_sid[future]
             res = future.result()
